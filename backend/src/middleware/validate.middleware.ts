@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { AnyZodObject, ZodError } from 'zod';
+import { ZodError, ZodTypeAny } from 'zod';
 
 /**
  * Factory that returns a middleware which validates a specific part of the
@@ -13,7 +13,7 @@ import { AnyZodObject, ZodError } from 'zod';
  */
 export function validate(
   target: 'body' | 'query' | 'params',
-  schema: AnyZodObject,
+  schema: ZodTypeAny,
 ) {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
