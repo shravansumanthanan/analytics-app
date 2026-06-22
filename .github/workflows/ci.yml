@@ -33,7 +33,7 @@ jobs:
         run: npm test
         env:
           MONGODB_URI: mongodb://localhost:27017/dummy
-          ADMIN_PASSWORD: test_password
+          ADMIN_PASSWORD: supersecret
 
       - name: Build
         run: npm run build
