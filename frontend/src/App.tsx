@@ -6,7 +6,7 @@ import { HeatmapsPage } from './pages/HeatmapsPage';
 import { OverviewPage } from './pages/OverviewPage';
 
 function ErrorBoundary() {
-  const error = useRouteError() as any;
+  const error = useRouteError() as Error | { message?: string } | null;
   return (
     <div className="p-8 flex flex-col items-center justify-center min-h-[100dvh] text-zinc-500 font-mono bg-zinc-950">
       <h1 className="text-2xl text-red-500 mb-4 tracking-widest uppercase">Fatal Error</h1>
