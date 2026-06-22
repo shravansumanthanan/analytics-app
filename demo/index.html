@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acme Corp - Demo Landing Page</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background: #fafafa;
+        }
+        header {
+            background: #fff;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, #e0eafc, #cfdef3);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        p.subtitle {
+            font-size: 1.25rem;
+            color: #555;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+        .btn {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-outline {
+            background: transparent;
+            color: #007bff;
+            border: 2px solid #007bff;
+        }
+        .btn-outline:hover {
+            background: #e6f2ff;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        footer {
+            text-align: center;
+            padding: 2rem;
+            background: #333;
+            color: #fff;
+        }
+        .interactive-area {
+            max-width: 600px;
+            margin: 0 auto 4rem;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+    </style>
+    <!-- Include the tracker script -->
+    <script src="/tracker.js" data-project-id="demo_project_001" defer></script>
+</head>
+<body>
+    <header>
+        <div class="logo" style="font-weight: bold; font-size: 1.5rem;">Acme Corp</div>
+        <nav>
+            <a href="#" class="btn btn-outline" id="nav-login-btn">Log In</a>
+            <a href="#" class="btn" id="nav-signup-btn">Sign Up</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h1>Analytics Validation Demo</h1>
+            <p class="subtitle">This page simulates a real customer environment. Every click you make is tracked and batched by the standalone AnalyticsOS script.</p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button class="btn" id="hero-cta-main">Get Started Now</button>
+                <button class="btn btn-outline" id="hero-cta-secondary">Read Documentation</button>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="feature-card" id="feature-1">
+                <h3>Lightweight Tracking</h3>
+                <p>The tracker is small, uses zero external dependencies, and doesn't impact your main thread.</p>
+                <button class="btn btn-outline" style="margin-top: 1rem;" onclick="window.AnalyticsOS && window.AnalyticsOS.track('feature_clicked', { feature: 'lightweight' })">Learn More</button>
+            </div>
+            <div class="feature-card" id="feature-2">
+                <h3>Smart Batching</h3>
+                <p>Events are batched in memory and flushed periodically or upon page unload via the Fetch API with keepalive.</p>
+                <button class="btn btn-outline" style="margin-top: 1rem;" onclick="window.AnalyticsOS && window.AnalyticsOS.track('feature_clicked', { feature: 'batching' })">Learn More</button>
+            </div>
+            <div class="feature-card" id="feature-3">
+                <h3>Privacy Focused</h3>
+                <p>We respect Do Not Track settings and ensure data is sent securely over encrypted channels.</p>
+                <button class="btn btn-outline" style="margin-top: 1rem;" onclick="window.AnalyticsOS && window.AnalyticsOS.track('feature_clicked', { feature: 'privacy' })">Learn More</button>
+            </div>
+        </section>
+
+        <section class="interactive-area">
+            <h2>Test Custom Events</h2>
+            <p>Click the buttons below to trigger explicit `custom` events via the global window.AnalyticsOS object.</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn" onclick="window.AnalyticsOS && window.AnalyticsOS.track('add_to_cart', { productId: 101, price: 29.99 })">Add to Cart</button>
+                <button class="btn btn-outline" onclick="window.AnalyticsOS && window.AnalyticsOS.track('subscribe', { plan: 'pro' })">Subscribe Pro</button>
+                <button class="btn btn-outline" style="border-color: #dc3545; color: #dc3545;" onclick="window.AnalyticsOS && window.AnalyticsOS.track('error_occurred', { message: 'Simulation Error' })">Trigger Error Event</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Acme Corp. All rights reserved.</p>
+        <div>
+            <a href="#" style="color: #ccc; margin: 0 0.5rem;" id="footer-link-privacy">Privacy Policy</a>
+            <a href="#" style="color: #ccc; margin: 0 0.5rem;" id="footer-link-terms">Terms of Service</a>
+        </div>
+    </footer>
+</body>
+</html>

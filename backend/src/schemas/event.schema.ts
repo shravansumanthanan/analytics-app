@@ -10,6 +10,8 @@ import { z } from 'zod';
 
 const baseEventSchema = z.object({
   sessionId: z.string().min(1, 'sessionId is required'),
+  visitorId: z.string().min(1, 'visitorId is required').optional(),
+  projectId: z.string().optional(),
   url: z.string().url('url must be a valid URL'),
   timestamp: z.coerce.date(),
   userAgent: z.string().optional(),
@@ -17,18 +19,35 @@ const baseEventSchema = z.object({
 
 const pageViewSchema = baseEventSchema.extend({
   type: z.literal('page_view'),
+  data: z.object({
+    title: z.string().optional(),
+    referrer: z.string().optional(),
+  }),
 });
 
 const clickSchema = baseEventSchema.extend({
   type: z.literal('click'),
-  x: z.number().finite(),
-  y: z.number().finite(),
+  data: z.object({
+    x: z.number().finite(),
+    y: z.number().finite(),
+    selector: z.string().optional(),
+    text: z.string().optional(),
+  }),
+});
+
+const customSchema = baseEventSchema.extend({
+  type: z.literal('custom'),
+  data: z.object({
+    name: z.string(),
+    payload: z.record(z.unknown()).optional(),
+  }),
 });
 
 /** Single event — discriminated on `type`. */
 export const trackedEventSchema = z.discriminatedUnion('type', [
   pageViewSchema,
   clickSchema,
+  customSchema,
 ]);
 
 /** Ingest endpoint accepts a batch of one or more events. */

@@ -7,6 +7,8 @@ import mongoose, { Document, Schema } from 'mongoose';
  */
 export interface ISession extends Document {
   sessionId: string;
+  visitorId: string;
+  userAgent: string;
   firstSeen: Date;
   lastSeen: Date;
   eventCount: number;
@@ -15,6 +17,8 @@ export interface ISession extends Document {
 const SessionSchema = new Schema<ISession>(
   {
     sessionId: { type: String, required: true, unique: true },
+    visitorId: { type: String, default: 'unknown' },
+    userAgent: { type: String, default: 'unknown' },
     firstSeen: { type: Date, required: true },
     lastSeen: { type: Date, required: true },
     eventCount: { type: Number, required: true, default: 0 },

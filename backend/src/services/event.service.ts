@@ -2,6 +2,7 @@ import type { TrackedEvent, ClickPoint } from '../types/event.types';
 import type { IEvent } from '../models/event.model';
 import { EventRepository } from '../repositories/event.repository';
 import { SessionRepository } from '../repositories/session.repository';
+import { getSocketIO } from '../socket';
 
 /**
  * EventService — business logic for event ingestion and querying.
@@ -31,6 +32,14 @@ export class EventService {
       this.eventRepo.bulkCreate(events),
       this.sessionRepo.bulkUpsert(events),
     ]);
+
+    // Broadcast to connected clients that new events arrived
+    try {
+      const io = getSocketIO();
+      io.emit('new-events', events);
+    } catch (e) {
+      // Socket.IO might not be initialized during tests
+    }
   }
 
   /** Return the ordered event timeline for a session. */

@@ -6,6 +6,7 @@ import { SessionRepository } from '../repositories/session.repository';
 import { EventService } from '../services/event.service';
 import { SessionService } from '../services/session.service';
 import { validate } from '../middleware/validate.middleware';
+import { authenticate } from '../middleware/auth.middleware';
 import { ingestEventsSchema, heatmapQuerySchema } from '../schemas/event.schema';
 
 /**
@@ -31,13 +32,14 @@ router.post(
 );
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
-router.get('/sessions', sessionController.getAll);
-router.get('/sessions/:id/events', eventController.getSessionEvents);
+router.get('/sessions', authenticate, sessionController.getAll);
+router.get('/sessions/:id/events', authenticate, eventController.getSessionEvents);
 
 // ── Heatmap ───────────────────────────────────────────────────────────────────
-router.get('/heatmap/urls', eventController.getTrackedUrls);
+router.get('/heatmap/urls', authenticate, eventController.getTrackedUrls);
 router.get(
   '/heatmap',
+  authenticate,
   validate('query', heatmapQuerySchema),
   eventController.getHeatmap,
 );
