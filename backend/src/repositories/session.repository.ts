@@ -20,7 +20,7 @@ export class SessionRepository {
    */
   async bulkUpsert(events: TrackedEvent[]): Promise<void> {
     // Group events by sessionId so we can compute per-session counts.
-    const sessionMap = new Map<string, { timestamp: Date; count: number }>();
+    const sessionMap = new Map<string, { timestamp: Date; count: number; visitorId: string; userAgent: string }>();
 
     for (const event of events) {
       const existing = sessionMap.get(event.sessionId);
@@ -28,17 +28,19 @@ export class SessionRepository {
         sessionMap.set(event.sessionId, {
           timestamp: event.timestamp,
           count: (existing?.count ?? 0) + 1,
+          visitorId: event.visitorId || 'unknown',
+          userAgent: event.userAgent || 'unknown',
         });
       } else {
         existing.count += 1;
       }
     }
 
-    const ops = Array.from(sessionMap.entries()).map(([sessionId, { timestamp, count }]) => ({
+    const ops = Array.from(sessionMap.entries()).map(([sessionId, { timestamp, count, visitorId, userAgent }]) => ({
       updateOne: {
         filter: { sessionId },
         update: {
-          $setOnInsert: { firstSeen: timestamp },
+          $setOnInsert: { firstSeen: timestamp, visitorId, userAgent },
           $set: { lastSeen: timestamp },
           $inc: { eventCount: count },
         },
@@ -59,9 +61,11 @@ export class SessionRepository {
       .exec()
       .then((docs) =>
         docs.map((doc) => ({
-          sessionId: doc.sessionId,
-          firstSeen: doc.firstSeen,
-          lastSeen: doc.lastSeen,
+          id: doc.sessionId,
+          visitorId: doc.visitorId || 'unknown',
+          userAgent: doc.userAgent || 'unknown',
+          startedAt: doc.firstSeen,
+          lastActiveAt: doc.lastSeen,
           eventCount: doc.eventCount,
         })),
       );

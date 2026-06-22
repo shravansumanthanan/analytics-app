@@ -35,10 +35,18 @@ export class EventRepository {
    * Projects only the fields needed by the heatmap — avoids over-fetching.
    */
   async findClicksByUrl(url: string): Promise<ClickPoint[]> {
-    return EventModel.find({ url, type: 'click' })
-      .select({ x: 1, y: 1, _id: 0 })
-      .lean<ClickPoint[]>()
+    const docs = await EventModel.find({ url, type: 'click' })
+      .select({ 'data.x': 1, 'data.y': 1, _id: 0 })
+      .lean()
       .exec();
+
+    return docs
+      .filter((doc: any) => doc.data && typeof doc.data.x === 'number' && typeof doc.data.y === 'number')
+      .map((doc: any) => ({
+        x: doc.data.x,
+        y: doc.data.y,
+        count: 1
+      }));
   }
 
   /**

@@ -8,24 +8,25 @@ import type { EventType } from '../types/event.types';
  */
 export interface IEvent extends Document {
   sessionId: string;
+  visitorId?: string;
+  projectId?: string;
   type: EventType;
   url: string;
   timestamp: Date;
   userAgent?: string;
-  x?: number;
-  y?: number;
+  data?: Record<string, any>;
 }
 
 const EventSchema = new Schema<IEvent>(
   {
     sessionId: { type: String, required: true, index: true },
-    type: { type: String, enum: ['page_view', 'click'] as EventType[], required: true },
+    visitorId: { type: String },
+    projectId: { type: String },
+    type: { type: String, enum: ['page_view', 'click', 'custom'] as EventType[], required: true },
     url: { type: String, required: true },
     timestamp: { type: Date, required: true },
     userAgent: { type: String },
-    // x/y are only present for click events — stored as nullable at DB layer.
-    x: { type: Number },
-    y: { type: Number },
+    data: { type: Schema.Types.Mixed },
   },
   {
     // Disable Mongoose's default __v field; we don't use optimistic concurrency here.

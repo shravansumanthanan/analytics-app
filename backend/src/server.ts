@@ -1,6 +1,7 @@
 import { createApp } from './app';
 import { connectDatabase } from './config/database';
 import { env } from './config/env';
+import { initSocketServer } from './socket';
 
 async function bootstrap(): Promise<void> {
   await connectDatabase();
@@ -11,6 +12,9 @@ async function bootstrap(): Promise<void> {
     console.log(`🚀 Server running on http://localhost:${env.PORT}`);
     console.log(`   Environment: ${env.NODE_ENV}`);
   });
+
+  // Initialize WebSockets
+  initSocketServer(server);
 
   /**
    * Graceful shutdown: stop accepting new connections, wait for in-flight

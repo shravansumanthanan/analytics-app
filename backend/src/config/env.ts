@@ -13,6 +13,7 @@ const envSchema = z.object({
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   ALLOWED_ORIGINS: z.string().default('http://localhost:3000,http://localhost:5173'),
+  ADMIN_PASSWORD: z.string().min(1, 'ADMIN_PASSWORD is required for dashboard security'),
 });
 
 const parsed = envSchema.safeParse(process.env);
