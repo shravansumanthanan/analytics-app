@@ -75,7 +75,6 @@ export function useHeatmap(url: string | null) {
   );
 
   return {
-  return {
     points: data?.data ?? [],
     isLoading,
     isError: !!error,
