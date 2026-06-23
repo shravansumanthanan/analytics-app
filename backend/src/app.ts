@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { env } from './config/env';
 import router from './routes/index';
 import { errorMiddleware } from './middleware/error.middleware';
@@ -62,6 +63,9 @@ export function createApp(): Application {
   app.get('/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  // Serve the tracker folder statically
+  app.use(express.static(path.join(__dirname, '../../tracker')));
 
   // ── API routes ───────────────────────────────────────────────────────────────
   app.use('/api', router);

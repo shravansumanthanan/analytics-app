@@ -39,4 +39,14 @@ export interface SessionSummary {
   readonly lastActiveAt: Date;
   readonly eventCount: number;
   readonly frustrationCount: number;
+  readonly sessionDuration?: number;
+  readonly bounce?: boolean;
+  readonly pageViewsCount?: number;
+  readonly deviceType?: string;
+  readonly country?: string;
+  readonly region?: string;
+  readonly city?: string;
+  readonly utmSource?: string;
+  readonly utmMedium?: string;
+  readonly utmCampaign?: string;
 }

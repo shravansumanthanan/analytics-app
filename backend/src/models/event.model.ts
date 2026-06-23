@@ -16,6 +16,15 @@ export interface IEvent extends Document {
   userAgent?: string;
   isBot?: boolean;
   data?: Record<string, any>;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmTerm?: string;
+  utmContent?: string;
+  deviceType?: string;
+  country?: string;
+  region?: string;
+  city?: string;
 }
 
 const EventSchema = new Schema<IEvent>(
@@ -29,6 +38,15 @@ const EventSchema = new Schema<IEvent>(
     userAgent: { type: String },
     isBot: { type: Boolean, default: false, index: true },
     data: { type: Schema.Types.Mixed },
+    utmSource: { type: String },
+    utmMedium: { type: String },
+    utmCampaign: { type: String },
+    utmTerm: { type: String },
+    utmContent: { type: String },
+    deviceType: { type: String },
+    country: { type: String },
+    region: { type: String },
+    city: { type: String },
   },
   {
     // Disable Mongoose's default __v field; we don't use optimistic concurrency here.

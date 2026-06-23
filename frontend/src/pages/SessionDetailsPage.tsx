@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { useSessionEvents, useSessions, useAnnotations } from '../api/hooks';
 import { fetcher } from '../api/client';
@@ -25,6 +25,30 @@ export function SessionDetailsPage() {
 
   // Reference to get current player time
   const getCurrentTimeRef = useRef<(() => number) | null>(null);
+
+  const [currentTimeMs, setCurrentTimeMs] = useState(0);
+
+  // Poll current playhead time
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (getCurrentTimeRef.current) {
+        setCurrentTimeMs(getCurrentTimeRef.current());
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, []);
+
+  const sessionStartTime = events && events.length > 0 ? new Date(events[0].timestamp).getTime() : 0;
+  const logsWithOffset = (events || [])
+    .filter(e => e.type === 'custom' && e.data?.name === 'console_log')
+    .map(e => ({
+      offsetMs: new Date(e.timestamp).getTime() - sessionStartTime,
+      level: (e.data as any)?.payload?.level || 'log',
+      message: (e.data as any)?.payload?.message || '',
+      timeStr: format(new Date(e.timestamp), 'HH:mm:ss.SSS')
+    }));
+
+  const activeLogs = logsWithOffset.filter(log => log.offsetMs <= currentTimeMs);
 
   if (isError) {
     return (
@@ -219,6 +243,42 @@ export function SessionDetailsPage() {
               onGetCurrentTime={(fn) => { getCurrentTimeRef.current = fn; }}
               annotations={annotations}
             />
+          </div>
+
+          {/* Console Logs Terminal */}
+          <div className="bg-zinc-950 border border-zinc-800/80 rounded-xl overflow-hidden shadow-2xl">
+            <div className="flex items-center gap-2 px-5 py-3 border-b border-zinc-800/60 bg-zinc-900/40">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+              <h3 className="font-mono text-xs uppercase tracking-wider text-zinc-400 ml-2">
+                Live Browser Console Logs
+              </h3>
+              <span className="ml-auto text-[9px] font-mono text-zinc-500 bg-zinc-900 border border-zinc-850 px-2 py-0.5 rounded">
+                {activeLogs.length} / {logsWithOffset.length} logs
+              </span>
+            </div>
+            
+            <div className="p-4 h-48 overflow-y-auto font-mono text-xs space-y-1.5 bg-black/85 select-text">
+              {activeLogs.map((log, index) => {
+                let colorClass = 'text-zinc-400';
+                if (log.level === 'warn') colorClass = 'text-yellow-500';
+                if (log.level === 'error') colorClass = 'text-red-500';
+                
+                return (
+                  <div key={index} className={`flex items-start gap-2 ${colorClass}`}>
+                    <span className="text-zinc-600 shrink-0 select-none">[{log.timeStr}]</span>
+                    <span className="uppercase font-bold shrink-0 select-none">[{log.level}]</span>
+                    <span className="break-all whitespace-pre-wrap">{log.message}</span>
+                  </div>
+                );
+              })}
+              {activeLogs.length === 0 && (
+                <div className="text-zinc-700 italic text-center py-8 select-none">
+                  No console outputs recorded at this playback offset.
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Collaboration / Notes Panel */}

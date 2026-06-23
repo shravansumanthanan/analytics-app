@@ -28,6 +28,14 @@
         } else {
           preInitQueue.push(['custom', { name, payload }]);
         }
+      },
+      grantConsent: function() {
+        safeSetStorage('aos_consent', 'true');
+        logWarn('Consent granted. Tracking enabled.');
+      },
+      revokeConsent: function() {
+        safeSetStorage('aos_consent', 'false');
+        logWarn('Consent revoked. Tracking disabled.');
       }
     };
 
@@ -215,7 +223,18 @@
     let maxScrollDepth = 0;
     let scrollThrottleTimer = null;
 
+    function isTrackingAllowed() {
+      if (navigator.doNotTrack === '1' || window.doNotTrack === '1') {
+        return false;
+      }
+      if (safeGetStorage('aos_consent') === 'false') {
+        return false;
+      }
+      return true;
+    }
+
     function trackEvent(type, data = {}) {
+      if (!isTrackingAllowed()) return;
       try {
         const event = {
           projectId,
@@ -354,6 +373,43 @@
       };
     }
 
+    function interceptConsole() {
+      const consoleMethods = ['log', 'warn', 'error'];
+      consoleMethods.forEach(method => {
+        const original = console[method];
+        if (!original) return;
+        console[method] = function (...args) {
+          try {
+            original.apply(console, args);
+            
+            const message = args.map(arg => {
+              if (arg instanceof Error) return arg.message + '\n' + arg.stack;
+              if (typeof arg === 'object') {
+                try {
+                  return JSON.stringify(arg);
+                } catch (e) {
+                  return String(arg);
+                }
+              }
+              return String(arg);
+            }).join(' ');
+
+            if (message.includes('AnalyticsOS:')) return;
+
+            trackEvent('custom', {
+              name: 'console_log',
+              payload: {
+                level: method,
+                message: message.substring(0, 500)
+              }
+            });
+          } catch (e) {
+            // Ignore
+          }
+        };
+      });
+    }
+
     // Set up listeners
     function init() {
       isReady = true;
@@ -363,13 +419,18 @@
         trackEvent(eventArgs[0], eventArgs[1]);
       }
 
+      // Intercept console logs
+      interceptConsole();
+
+      const apiOrigin = new URL(ENDPOINT).origin;
+
       // ── rrweb and socket.io loaders ──
-      loadScript('https://cdn.jsdelivr.net/npm/rrweb@latest/dist/record/rrweb-record.min.js', () => {
+      loadScript(apiOrigin + '/vendor/rrweb-record.min.js', () => {
         rrwebLoaded = true;
         startRecording();
       });
 
-      loadScript('https://cdn.jsdelivr.net/npm/socket.io-client@4.8.3/dist/socket.io.min.js', () => {
+      loadScript(apiOrigin + '/vendor/socket.io.min.js', () => {
         socketLoaded = true;
         startSocket();
       });

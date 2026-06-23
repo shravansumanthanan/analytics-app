@@ -2,7 +2,7 @@ import type { TrackedEvent, ClickPoint } from '../types/event.types';
 import type { IEvent } from '../models/event.model';
 import { EventRepository } from '../repositories/event.repository';
 import { SessionRepository } from '../repositories/session.repository';
-import { getSocketIO } from '../socket';
+import { WriteBufferQueue } from './write-buffer.queue';
 
 /**
  * EventService — business logic for event ingestion and querying.
@@ -14,32 +14,20 @@ import { getSocketIO } from '../socket';
  * independently testable without a running database.
  */
 export class EventService {
+  private readonly writeBuffer: WriteBufferQueue;
+
   constructor(
     private readonly eventRepo: EventRepository,
     private readonly sessionRepo: SessionRepository,
-  ) {}
+  ) {
+    this.writeBuffer = new WriteBufferQueue(eventRepo, sessionRepo);
+  }
 
   /**
-   * Ingest a batch of events.
-   *
-   * Both writes (events + session upserts) are fired concurrently.
-   * They are logically independent: a failed session upsert is not a
-   * reason to discard the events. If strict consistency were required,
-   * we would use a MongoDB transaction here.
+   * Ingest a batch of events asynchronously using the write buffer queue.
    */
-  async ingest(events: TrackedEvent[]): Promise<void> {
-    await Promise.all([
-      this.eventRepo.bulkCreate(events),
-      this.sessionRepo.bulkUpsert(events),
-    ]);
-
-    // Broadcast to connected clients that new events arrived
-    try {
-      const io = getSocketIO();
-      io.emit('new-events', events);
-    } catch (e) {
-      // Socket.IO might not be initialized during tests
-    }
+  async ingest(events: TrackedEvent[], ip?: string): Promise<void> {
+    this.writeBuffer.add(events, ip);
   }
 
   /** Return the ordered event timeline for a session. */

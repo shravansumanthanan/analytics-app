@@ -15,6 +15,15 @@ const baseEventSchema = z.object({
   url: z.string().url('url must be a valid URL'),
   timestamp: z.coerce.date(),
   userAgent: z.string().optional(),
+  utmSource: z.string().optional(),
+  utmMedium: z.string().optional(),
+  utmCampaign: z.string().optional(),
+  utmTerm: z.string().optional(),
+  utmContent: z.string().optional(),
+  deviceType: z.string().optional(),
+  country: z.string().optional(),
+  region: z.string().optional(),
+  city: z.string().optional(),
 });
 
 const pageViewSchema = baseEventSchema.extend({

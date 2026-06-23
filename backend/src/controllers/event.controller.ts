@@ -30,7 +30,8 @@ export class EventController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      await this.eventService.ingest(req.body);
+      const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';
+      await this.eventService.ingest(req.body, ip);
       res.status(202).json({ success: true, accepted: req.body.length });
     } catch (err) {
       next(err);

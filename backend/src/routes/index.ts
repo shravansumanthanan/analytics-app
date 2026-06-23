@@ -7,6 +7,7 @@ import { UserController } from '../controllers/user.controller';
 import { AnnotationController } from '../controllers/annotation.controller';
 import { IntegrationController } from '../controllers/integration.controller';
 import { ExportController } from '../controllers/export.controller';
+import { WebhookController } from '../controllers/webhook.controller';
 
 import { EventRepository } from '../repositories/event.repository';
 import { SessionRepository } from '../repositories/session.repository';
@@ -48,6 +49,7 @@ const userController = new UserController(userService);
 const annotationController = new AnnotationController(annotationService);
 const integrationController = new IntegrationController(sessionService, eventService);
 const exportController = new ExportController(sessionService, eventService);
+const webhookController = new WebhookController();
 
 const router = Router();
 
@@ -88,6 +90,11 @@ router.delete('/users/:id', authenticate, userController.delete);
 router.get('/sessions/:id/annotations', authenticate, annotationController.getBySession);
 router.post('/sessions/:id/annotations', authenticate, validate('body', createAnnotationSchema), annotationController.create);
 router.delete('/annotations/:id', authenticate, annotationController.delete);
+
+// ── Webhooks ─────────────────────────────────────────────────────────────────
+router.get('/webhooks', authenticate, webhookController.getAll);
+router.post('/webhooks', authenticate, webhookController.create);
+router.delete('/webhooks/:id', authenticate, webhookController.delete);
 
 // ── Integrations (Power BI) ──────────────────────────────────────────────────
 router.get('/integrations/powerbi', integrationController.getPowerBiData);

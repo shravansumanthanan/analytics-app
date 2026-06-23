@@ -224,6 +224,40 @@ export function HeatmapsPage() {
         ctx.globalCompositeOperation = 'source-over';
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw decorative fold lines
+        const lines = [
+          { pct: 0.25, label: 'Top Fold (25%)' },
+          { pct: 0.50, label: 'Mid Page (50%)' },
+          { pct: 0.75, label: 'Bottom Page (75%)' }
+        ];
+
+        lines.forEach(line => {
+          const y = canvas.height * line.pct;
+
+          // Draw dashed guide line
+          ctx.beginPath();
+          ctx.setLineDash([6, 4]);
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width, y);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.setLineDash([]); // Reset line dash
+
+          // Draw pill background
+          ctx.fillStyle = 'rgba(9, 9, 11, 0.85)';
+          ctx.beginPath();
+          ctx.roundRect(10, y - 10, 110, 20, 4);
+          ctx.fill();
+
+          // Draw text label
+          ctx.fillStyle = '#f4f4f5';
+          ctx.font = 'bold 10px monospace';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(line.label, 15, y);
+        });
       }
     }
   }, [resolvedPoints, points, heatmapType]);

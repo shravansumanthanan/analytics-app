@@ -33,43 +33,130 @@ export class SessionRepository {
    * bulkWrite sends all operations in a single round-trip to MongoDB.
    */
   async bulkUpsert(events: TrackedEvent[]): Promise<void> {
-    // Group events by sessionId so we can compute per-session counts.
-    const sessionMap = new Map<string, { timestamp: Date; count: number; frustrationCount: number; visitorId: string; userAgent: string; isBot: boolean }>();
+    // Group events by sessionId so we can compute per-session updates.
+    const sessionMap = new Map<string, {
+      earliestTimestamp: Date;
+      latestTimestamp: Date;
+      count: number;
+      frustrationCount: number;
+      pageViewsCount: number;
+      visitorId: string;
+      userAgent: string;
+      isBot: boolean;
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+      deviceType?: string;
+      country?: string;
+      region?: string;
+      city?: string;
+    }>();
 
     for (const event of events) {
+      const ev = event as any;
       const isFrustrated = event.type === 'click' && event.data && (event.data as any).isFrustrated ? 1 : 0;
       const eventIsBot = isBotUserAgent(event.userAgent);
-      
+      const isPV = event.type === 'page_view' ? 1 : 0;
+
       const existing = sessionMap.get(event.sessionId);
-      if (!existing || event.timestamp > existing.timestamp) {
+      const timestamp = new Date(event.timestamp);
+
+      if (!existing) {
         sessionMap.set(event.sessionId, {
-          timestamp: event.timestamp,
-          count: (existing?.count ?? 0) + 1,
-          frustrationCount: (existing?.frustrationCount ?? 0) + isFrustrated,
+          earliestTimestamp: timestamp,
+          latestTimestamp: timestamp,
+          count: 1,
+          frustrationCount: isFrustrated,
+          pageViewsCount: isPV,
           visitorId: event.visitorId || 'unknown',
           userAgent: event.userAgent || 'unknown',
-          isBot: existing ? (existing.isBot || eventIsBot) : eventIsBot,
+          isBot: eventIsBot,
+          utmSource: ev.utmSource,
+          utmMedium: ev.utmMedium,
+          utmCampaign: ev.utmCampaign,
+          deviceType: ev.deviceType,
+          country: ev.country,
+          region: ev.region,
+          city: ev.city,
         });
       } else {
         existing.count += 1;
         existing.frustrationCount += isFrustrated;
+        existing.pageViewsCount += isPV;
+        if (timestamp < existing.earliestTimestamp) {
+          existing.earliestTimestamp = timestamp;
+        }
+        if (timestamp > existing.latestTimestamp) {
+          existing.latestTimestamp = timestamp;
+        }
         if (eventIsBot) {
           existing.isBot = true;
         }
+        if (ev.utmSource) existing.utmSource = ev.utmSource;
+        if (ev.utmMedium) existing.utmMedium = ev.utmMedium;
+        if (ev.utmCampaign) existing.utmCampaign = ev.utmCampaign;
+        if (ev.deviceType) existing.deviceType = ev.deviceType;
+        if (ev.country) existing.country = ev.country;
+        if (ev.region) existing.region = ev.region;
+        if (ev.city) existing.city = ev.city;
       }
     }
 
-    const ops = Array.from(sessionMap.entries()).map(([sessionId, { timestamp, count, frustrationCount, visitorId, userAgent, isBot }]) => ({
-      updateOne: {
-        filter: { sessionId },
-        update: {
-          $setOnInsert: { firstSeen: timestamp, visitorId, userAgent, isBot },
-          $set: { lastSeen: timestamp, isBot },
-          $inc: { eventCount: count, frustrationCount: frustrationCount },
+    // Fetch existing sessions in one query
+    const sessionIds = Array.from(sessionMap.keys());
+    const existingSessions = await SessionModel.find({ sessionId: { $in: sessionIds } }).lean().exec();
+    const existingSessionsMap = new Map<string, any>();
+    for (const s of existingSessions) {
+      existingSessionsMap.set(s.sessionId, s);
+    }
+
+    // Create bulkWrite operations
+    const ops = Array.from(sessionMap.entries()).map(([sessionId, update]) => {
+      const dbSession = existingSessionsMap.get(sessionId);
+      
+      const firstSeen = dbSession ? new Date(dbSession.firstSeen) : update.earliestTimestamp;
+      const lastSeen = dbSession 
+        ? (new Date(dbSession.lastSeen) > update.latestTimestamp ? new Date(dbSession.lastSeen) : update.latestTimestamp)
+        : update.latestTimestamp;
+        
+      const eventCount = (dbSession?.eventCount || 0) + update.count;
+      const frustrationCount = (dbSession?.frustrationCount || 0) + update.frustrationCount;
+      const pageViewsCount = (dbSession?.pageViewsCount || 0) + update.pageViewsCount;
+      
+      const durationMs = lastSeen.getTime() - firstSeen.getTime();
+      const sessionDuration = Math.max(0, Math.round(durationMs / 1000));
+      const bounce = eventCount <= 1 || sessionDuration < 10;
+
+      return {
+        updateOne: {
+          filter: { sessionId },
+          update: {
+            $setOnInsert: { 
+              firstSeen, 
+              visitorId: update.visitorId, 
+              userAgent: update.userAgent,
+              deviceType: update.deviceType,
+              country: update.country,
+              region: update.region,
+              city: update.city,
+              utmSource: update.utmSource,
+              utmMedium: update.utmMedium,
+              utmCampaign: update.utmCampaign,
+            },
+            $set: { 
+              lastSeen, 
+              isBot: dbSession ? (dbSession.isBot || update.isBot) : update.isBot,
+              sessionDuration,
+              bounce,
+              eventCount,
+              frustrationCount,
+              pageViewsCount,
+            },
+          },
+          upsert: true,
         },
-        upsert: true,
-      },
-    }));
+      };
+    });
 
     if (ops.length > 0) {
       await SessionModel.bulkWrite(ops, { ordered: false });
@@ -148,6 +235,16 @@ export class SessionRepository {
           lastActiveAt: doc.lastSeen,
           eventCount: doc.eventCount,
           frustrationCount: doc.frustrationCount || 0,
+          sessionDuration: doc.sessionDuration,
+          bounce: doc.bounce,
+          pageViewsCount: doc.pageViewsCount,
+          deviceType: doc.deviceType,
+          country: doc.country,
+          region: doc.region,
+          city: doc.city,
+          utmSource: doc.utmSource,
+          utmMedium: doc.utmMedium,
+          utmCampaign: doc.utmCampaign,
         })),
       );
   }

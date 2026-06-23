@@ -14,6 +14,16 @@ export interface ISession extends Document {
   eventCount: number;
   frustrationCount: number;
   isBot?: boolean;
+  sessionDuration: number;
+  bounce: boolean;
+  pageViewsCount: number;
+  deviceType?: string;
+  country?: string;
+  region?: string;
+  city?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
 }
 
 const SessionSchema = new Schema<ISession>(
@@ -26,6 +36,16 @@ const SessionSchema = new Schema<ISession>(
     eventCount: { type: Number, required: true, default: 0 },
     frustrationCount: { type: Number, required: true, default: 0 },
     isBot: { type: Boolean, default: false, index: true },
+    sessionDuration: { type: Number, required: true, default: 0 },
+    bounce: { type: Boolean, required: true, default: true },
+    pageViewsCount: { type: Number, required: true, default: 0 },
+    deviceType: { type: String },
+    country: { type: String },
+    region: { type: String },
+    city: { type: String },
+    utmSource: { type: String },
+    utmMedium: { type: String },
+    utmCampaign: { type: String },
   },
   {
     versionKey: false,
