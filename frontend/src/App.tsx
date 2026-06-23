@@ -1,9 +1,18 @@
 import { createBrowserRouter, RouterProvider, useRouteError } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { Layout } from './components/layout/Layout';
+import { LoginModal } from './components/ui/LoginModal';
 import { SessionsPage } from './pages/SessionsPage';
 import { SessionDetailsPage } from './pages/SessionDetailsPage';
 import { HeatmapsPage } from './pages/HeatmapsPage';
 import { OverviewPage } from './pages/OverviewPage';
+import {
+  authEvents,
+  AUTH_REQUIRED_EVENT,
+  AUTH_INVALID_EVENT,
+  setToken,
+  getToken,
+} from './api/client';
 
 function ErrorBoundary() {
   const error = useRouteError() as Error | { message?: string } | null;
@@ -52,7 +61,39 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  return <RouterProvider router={router} />;
+  const [showLogin, setShowLogin] = useState(!getToken());
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    function onAuthRequired() {
+      setAuthError(null);
+      setShowLogin(true);
+    }
+    function onAuthInvalid() {
+      setAuthError('Invalid password. Please try again.');
+      setShowLogin(true);
+    }
+
+    authEvents.addEventListener(AUTH_REQUIRED_EVENT, onAuthRequired);
+    authEvents.addEventListener(AUTH_INVALID_EVENT, onAuthInvalid);
+    return () => {
+      authEvents.removeEventListener(AUTH_REQUIRED_EVENT, onAuthRequired);
+      authEvents.removeEventListener(AUTH_INVALID_EVENT, onAuthInvalid);
+    };
+  }, []);
+
+  function handleLogin(token: string) {
+    setToken(token);
+    setAuthError(null);
+    setShowLogin(false);
+  }
+
+  return (
+    <>
+      {showLogin && <LoginModal onSuccess={handleLogin} error={authError} />}
+      <RouterProvider router={router} />
+    </>
+  );
 }
 
 export default App;

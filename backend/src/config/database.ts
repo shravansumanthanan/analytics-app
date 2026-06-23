@@ -9,9 +9,11 @@ import { env } from './env';
 export async function connectDatabase(): Promise<void> {
   mongoose.set('strictQuery', true);
 
-  mongoose.connection.on('connected', () =>
-    console.log('✅ MongoDB connected:', env.MONGODB_URI),
-  );
+  mongoose.connection.on('connected', () => {
+    // Log only the host, not the full URI (which may contain credentials)
+    const safeUri = env.MONGODB_URI.replace(/:\/\/[^@]*@/, '://***@');
+    console.log('✅ MongoDB connected:', safeUri);
+  });
   mongoose.connection.on('error', (err) =>
     console.error('❌ MongoDB connection error:', err),
   );

@@ -1,5 +1,6 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
 import router from './routes/index';
@@ -12,6 +13,9 @@ import { errorMiddleware } from './middleware/error.middleware';
  */
 export function createApp(): Application {
   const app = express();
+
+  // ── Security Headers (Helmet) ───────────────────────────────────────────────
+  app.use(helmet());
 
   // ── Rate Limiting ────────────────────────────────────────────────────────────
   const globalLimiter = rateLimit({
@@ -40,7 +44,9 @@ export function createApp(): Application {
           if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
           } else {
-            callback(new Error(`Origin '${origin}' not allowed by CORS`));
+            // Block origin by returning false, which blocks headers on client side
+            // instead of throwing an Error and crashing the request stream.
+            callback(null, false);
           }
         },
         methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
