@@ -28,7 +28,7 @@ export function createApp(): Application {
   app.use(globalLimiter);
 
   // ── CORS ────────────────────────────────────────────────────────────────────
-  const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
+  const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim().replace(/\/$/, ''));
   app.use((req, res, next) => {
     // Permissive CORS for the public tracking ingestion endpoint
     if (req.path === '/api/events') {

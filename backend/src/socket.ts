@@ -8,7 +8,7 @@ let io: SocketIOServer | null = null;
  * Initialize the Socket.IO server attached to the HTTP server
  */
 export function initSocketServer(server: HttpServer): void {
-  const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
+  const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim().replace(/\/$/, ''));
 
   io = new SocketIOServer(server, {
     cors: {
