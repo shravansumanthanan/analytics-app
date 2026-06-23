@@ -13,7 +13,7 @@ const WebhookSchema = new Schema<IWebhook>(
   {
     versionKey: false,
     strict: true,
-  }
+  },
 );
 
 export const WebhookModel = mongoose.model<IWebhook>('Webhook', WebhookSchema);

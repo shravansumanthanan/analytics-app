@@ -10,48 +10,50 @@ export interface Webhook {
 export async function getWebhooks(): Promise<Webhook[]> {
   try {
     const docs = await WebhookModel.find().lean().exec();
-    return docs.map(doc => ({
-      id: (doc as any)._id.toString(),
-      url: doc.url,
-      createdAt: doc.createdAt.toISOString()
+    return docs.map(d => ({
+      id: (d as any)._id.toString(),
+      url: d.url,
+      createdAt: d.createdAt.toISOString(),
     }));
   } catch (err) {
-    console.error('AOS Webhooks: Failed to load webhooks', err);
+    console.error('AOS Webhooks: Failed to load webhooks from DB', err);
     return [];
   }
 }
 
 /** Register a new webhook endpoint in MongoDB. */
 export async function registerWebhook(url: string): Promise<Webhook> {
-  const existing = await WebhookModel.findOne({ url }).lean().exec();
+  const existing = await WebhookModel.findOne({ url }).exec();
   if (existing) {
     return {
       id: (existing as any)._id.toString(),
       url: existing.url,
-      createdAt: existing.createdAt.toISOString()
+      createdAt: existing.createdAt.toISOString(),
     };
   }
 
   const doc = await WebhookModel.create({ url });
   return {
-    id: doc._id.toString(),
+    id: (doc as any)._id.toString(),
     url: doc.url,
-    createdAt: doc.createdAt.toISOString()
+    createdAt: doc.createdAt.toISOString(),
   };
 }
 
 /** Delete a registered webhook from MongoDB. */
 export async function deleteWebhook(id: string): Promise<boolean> {
   try {
-    const result = await WebhookModel.deleteOne({ _id: id }).exec();
-    return result.deletedCount > 0;
+    const res = await WebhookModel.deleteOne({ _id: id }).exec();
+    return (res.deletedCount ?? 0) > 0;
   } catch (err) {
+    console.error('AOS Webhooks: Failed to delete webhook', err);
     return false;
   }
 }
 
 /**
  * Dispatch an event to all registered webhooks asynchronously.
+ * Uses fetch to send a JSON POST body with the event type and payload.
  */
 export async function triggerWebhooks(eventType: string, payload: any): Promise<void> {
   const webhooks = await getWebhooks();
