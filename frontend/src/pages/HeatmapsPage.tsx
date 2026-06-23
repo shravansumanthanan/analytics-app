@@ -23,25 +23,42 @@ export function HeatmapsPage() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw points
+    // Draw thermal points
     points.forEach(point => {
-      const intensity = Math.min(point.count * 20, 100) / 100;
+      const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, 30);
       
-      const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, 20);
-      gradient.addColorStop(0, `rgba(168, 85, 247, ${intensity})`);
-      gradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
+      // Color grading based on click intensity
+      if (point.count > 5) {
+        // High density: Red core -> Orange -> Yellow -> Green -> Fade
+        gradient.addColorStop(0, 'rgba(239, 68, 68, 0.85)');   // Red
+        gradient.addColorStop(0.3, 'rgba(245, 158, 11, 0.65)'); // Orange
+        gradient.addColorStop(0.6, 'rgba(234, 179, 8, 0.45)');   // Yellow
+        gradient.addColorStop(0.8, 'rgba(34, 197, 94, 0.2)');   // Green
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');      // Blue/Fade
+      } else if (point.count > 2) {
+        // Medium density: Yellow core -> Green -> Blue -> Fade
+        gradient.addColorStop(0, 'rgba(234, 179, 8, 0.75)');    // Yellow
+        gradient.addColorStop(0.4, 'rgba(34, 197, 94, 0.45)');  // Green
+        gradient.addColorStop(0.8, 'rgba(59, 130, 246, 0.2)');   // Blue
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+      } else {
+        // Low density: Blue core -> Cyan -> Fade
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.7)');    // Blue
+        gradient.addColorStop(0.5, 'rgba(6, 182, 212, 0.35)');  // Cyan
+        gradient.addColorStop(1, 'rgba(6, 182, 212, 0)');
+      }
       
       ctx.globalCompositeOperation = 'screen';
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(point.x, point.y, 20, 0, 2 * Math.PI);
+      ctx.arc(point.x, point.y, 30, 0, 2 * Math.PI);
       ctx.fill();
 
-      // Draw center dot
+      // Draw center core dot
       ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
       ctx.beginPath();
-      ctx.arc(point.x, point.y, 1, 0, 2 * Math.PI);
+      ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
       ctx.fill();
     });
   }, [points]);
@@ -105,13 +122,20 @@ export function HeatmapsPage() {
         ) : isLoadingPoints ? (
           <div className="font-mono text-zinc-500 animate-pulse">Rendering heatmap...</div>
         ) : (
-          <div className="absolute inset-0 overflow-auto">
-            <div className="relative w-[1920px] h-[2000px] bg-zinc-900/10">
+          <div className="absolute inset-0 overflow-auto flex justify-center bg-zinc-950/20">
+            <div className="relative w-[1200px] h-[2000px] bg-white rounded-lg shadow-2xl overflow-hidden mt-4">
+              {/* Webpage iframe loaded behind the heatmap canvas */}
+              <iframe 
+                src={activeUrl} 
+                className="absolute inset-0 w-full h-full border-0 select-none pointer-events-none opacity-85"
+                title="Heatmap Target Webpage"
+              />
+              {/* The canvas layered directly on top of the iframe */}
               <canvas 
                 ref={canvasRef} 
-                width={1920} 
+                width={1200} 
                 height={2000} 
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 pointer-events-none z-10"
               />
             </div>
           </div>
