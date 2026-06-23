@@ -1,5 +1,5 @@
 (function () {
-  const ENDPOINT = 'http://localhost:4000/api/events';
+  const ENDPOINT = 'https://analytics-app-production-f085.up.railway.app/api/events';
   const BATCH_SIZE = 10;
   const FLUSH_INTERVAL_MS = 5000;
   const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
