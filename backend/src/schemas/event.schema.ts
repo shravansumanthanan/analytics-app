@@ -30,6 +30,8 @@ const clickSchema = baseEventSchema.extend({
   data: z.object({
     x: z.number().finite(),
     y: z.number().finite(),
+    offsetX: z.number().finite().optional(),
+    offsetY: z.number().finite().optional(),
     selector: z.string().optional(),
     text: z.string().optional(),
   }),
@@ -56,6 +58,7 @@ export const ingestEventsSchema = z.array(trackedEventSchema).min(1, 'At least o
 /** Heatmap query params. */
 export const heatmapQuerySchema = z.object({
   url: z.string().url('url query param must be a valid URL'),
+  sessionId: z.string().optional(),
 });
 
 // Derive TypeScript types from schemas — one definition, not two.

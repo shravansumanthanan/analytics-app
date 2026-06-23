@@ -67,10 +67,14 @@ export function useTrackedUrls() {
 /**
  * Hook to fetch heatmap data for a specific URL
  */
-export function useHeatmap(url: string | null) {
+export function useHeatmap(url: string | null, sessionId?: string | null) {
   const encodedUrl = url ? encodeURIComponent(url) : null;
+  const queryUrl = encodedUrl
+    ? `/heatmap?url=${encodedUrl}${sessionId ? `&sessionId=${sessionId}` : ''}`
+    : null;
+
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<HeatmapPoint[]>>(
-    encodedUrl ? `/heatmap?url=${encodedUrl}` : null,
+    queryUrl,
     fetcher
   );
 

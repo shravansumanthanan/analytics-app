@@ -48,8 +48,8 @@ export class EventService {
   }
 
   /** Return click coordinates for the heatmap view. */
-  async getClickHeatmap(url: string): Promise<ClickPoint[]> {
-    return this.eventRepo.findClicksByUrl(url);
+  async getClickHeatmap(url: string, sessionId?: string): Promise<ClickPoint[]> {
+    return this.eventRepo.findClicksByUrl(url, sessionId);
   }
 
   /** Return all URLs that have recorded click events. */

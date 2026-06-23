@@ -1,20 +1,90 @@
 import { useState, useEffect, useRef } from 'react';
-import { useTrackedUrls, useHeatmap } from '../api/hooks';
+import { useTrackedUrls, useHeatmap, useSessions } from '../api/hooks';
 import { MapTrifold, Crosshair, WarningCircle } from '@phosphor-icons/react';
+import type { HeatmapPoint } from '../api/types';
 
 export function HeatmapsPage() {
   const { urls, isLoading: isLoadingUrls, isError: isErrorUrls } = useTrackedUrls();
+  const { sessions } = useSessions();
+  
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
-
+  const [selectedSession, setSelectedSession] = useState<string>('');
+  
   // Derive the active URL without causing immediate synchronous re-renders
   const activeUrl = selectedUrl || (urls && urls.length > 0 ? urls[0] : null);
 
-  const { points, isLoading: isLoadingPoints, isError: isErrorPoints } = useHeatmap(activeUrl);
+  const { points, isLoading: isLoadingPoints, isError: isErrorPoints } = useHeatmap(activeUrl, selectedSession || null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  const [resolvedPoints, setResolvedPoints] = useState<HeatmapPoint[]>([]);
+  const [iframeHeight, setIframeHeight] = useState(2000);
+  const [isIframeReady, setIsIframeReady] = useState(false);
+
+  // Reset iframe state when URL or Session filter changes
   useEffect(() => {
-    if (!canvasRef.current || !points || points.length === 0) return;
+    setIsIframeReady(false);
+    setIframeHeight(2000);
+    setResolvedPoints([]);
+  }, [activeUrl, selectedSession]);
+
+  // Setup messaging bridge with iframe
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (!event.data) return;
+
+      if (event.data.type === 'aos-ready') {
+        setIsIframeReady(true);
+      }
+
+      if (event.data.type === 'aos-resolved' && Array.isArray(event.data.points)) {
+        setResolvedPoints(event.data.points);
+      }
+
+      if (event.data.type === 'aos-resize' && typeof event.data.height === 'number') {
+        setIframeHeight(event.data.height);
+      }
+    }
+
+    window.addEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
+  // Post points to iframe to resolve layout mapping
+  useEffect(() => {
+    if (!points || points.length === 0) {
+      setResolvedPoints([]);
+      return;
+    }
+
+    if (!isIframeReady) {
+      // Fallback coordinate mapping assuming standard 1200px width layout
+      const fallbackPoints = points.map(p => {
+        const isRelativePoint = p.x < 0 || Math.abs(p.x) < 600;
+        return {
+          ...p,
+          x: isRelativePoint ? 600 + p.x : p.x,
+        };
+      });
+      setResolvedPoints(fallbackPoints);
+      return;
+    }
+
+    const iframe = iframeRef.current;
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({
+        type: 'aos-resolve',
+        clicks: points
+      }, '*');
+    }
+  }, [points, isIframeReady]);
+
+  // Draw heatmap
+  useEffect(() => {
+    if (!canvasRef.current || !resolvedPoints || resolvedPoints.length === 0) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -23,32 +93,29 @@ export function HeatmapsPage() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Auto-detect if coordinates are relative offsets from the center of the page
-    const isRelative = points.some(p => p.x < 0) || points.every(p => Math.abs(p.x) < canvas.width / 2);
-
     // Draw thermal points
-    points.forEach(point => {
-      const drawX = isRelative ? (canvas.width / 2) + point.x : point.x;
+    resolvedPoints.forEach(point => {
+      const drawX = point.x;
       const drawY = point.y;
+
+      // Skip invalid or out-of-bounds coordinates
+      if (drawX < 0 || drawX > canvas.width || drawY < 0 || drawY > canvas.height) return;
 
       const gradient = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, 30);
       
       // Color grading based on click intensity
       if (point.count > 5) {
-        // High density: Red core -> Orange -> Yellow -> Green -> Fade
         gradient.addColorStop(0, 'rgba(239, 68, 68, 0.85)');   // Red
         gradient.addColorStop(0.3, 'rgba(245, 158, 11, 0.65)'); // Orange
         gradient.addColorStop(0.6, 'rgba(234, 179, 8, 0.45)');   // Yellow
         gradient.addColorStop(0.8, 'rgba(34, 197, 94, 0.2)');   // Green
         gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');      // Blue/Fade
       } else if (point.count > 2) {
-        // Medium density: Yellow core -> Green -> Blue -> Fade
         gradient.addColorStop(0, 'rgba(234, 179, 8, 0.75)');    // Yellow
         gradient.addColorStop(0.4, 'rgba(34, 197, 94, 0.45)');  // Green
         gradient.addColorStop(0.8, 'rgba(59, 130, 246, 0.2)');   // Blue
         gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
       } else {
-        // Low density: Blue core -> Cyan -> Fade
         gradient.addColorStop(0, 'rgba(59, 130, 246, 0.7)');    // Blue
         gradient.addColorStop(0.5, 'rgba(6, 182, 212, 0.35)');  // Cyan
         gradient.addColorStop(1, 'rgba(6, 182, 212, 0)');
@@ -67,7 +134,7 @@ export function HeatmapsPage() {
       ctx.arc(drawX, drawY, 2, 0, 2 * Math.PI);
       ctx.fill();
     });
-  }, [points]);
+  }, [resolvedPoints]);
 
   if (isErrorUrls) {
     return (
@@ -90,7 +157,21 @@ export function HeatmapsPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Target URL</span>
+          <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Session</span>
+          <select 
+            className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm rounded px-3 py-1.5 focus:outline-none focus:border-zinc-600 font-mono max-w-[200px]"
+            value={selectedSession}
+            onChange={(e) => setSelectedSession(e.target.value)}
+          >
+            <option value="">All Sessions</option>
+            {sessions.map(session => (
+              <option key={session.id} value={session.id}>
+                {session.id.substring(0, 8)}... ({session.userAgent.split(' ')[0] || 'Unknown Device'})
+              </option>
+            ))}
+          </select>
+
+          <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest ml-2">Target URL</span>
           <select 
             className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm rounded px-3 py-1.5 focus:outline-none focus:border-zinc-600 font-mono"
             value={activeUrl || ''}
@@ -128,10 +209,14 @@ export function HeatmapsPage() {
         ) : isLoadingPoints ? (
           <div className="font-mono text-zinc-500 animate-pulse">Rendering heatmap...</div>
         ) : (
-          <div className="absolute inset-0 overflow-auto flex justify-center bg-zinc-950/20">
-            <div className="relative w-[1200px] h-[2000px] bg-white rounded-lg shadow-2xl overflow-hidden mt-4">
+          <div className="absolute inset-0 overflow-auto flex justify-center bg-zinc-950/20 animate-fade-in">
+            <div 
+              className="relative bg-white rounded-lg shadow-2xl overflow-hidden mt-4 transition-all duration-300 ease-out"
+              style={{ width: '1200px', height: `${iframeHeight}px` }}
+            >
               {/* Webpage iframe loaded behind the heatmap canvas */}
               <iframe 
+                ref={iframeRef}
                 src={activeUrl} 
                 className="absolute inset-0 w-full h-full border-0 select-none pointer-events-none opacity-85"
                 title="Heatmap Target Webpage"
@@ -140,7 +225,7 @@ export function HeatmapsPage() {
               <canvas 
                 ref={canvasRef} 
                 width={1200} 
-                height={2000} 
+                height={iframeHeight} 
                 className="absolute inset-0 pointer-events-none z-10"
               />
             </div>

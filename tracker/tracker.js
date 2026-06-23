@@ -211,9 +211,22 @@
           // Track horizontal coordinate relative to the body's center to ensure alignment across different screen sizes.
           const xOffset = Math.round(e.pageX - (document.body.clientWidth / 2));
 
+          // Track offset relative to the clicked element itself for pixel-perfect element-relative mapping in heatmaps.
+          let offsetX = 0;
+          let offsetY = 0;
+          try {
+            const rect = target.getBoundingClientRect();
+            offsetX = Math.round(e.clientX - rect.left);
+            offsetY = Math.round(e.clientY - rect.top);
+          } catch (rectErr) {
+            // Fallback to 0 if bounding rect fails
+          }
+
           trackEvent('click', {
             x: xOffset,
             y: e.pageY,
+            offsetX: offsetX,
+            offsetY: offsetY,
             selector: getSelector(target),
             text: text,
           });
@@ -221,6 +234,81 @@
           logError('Click tracking error', err);
         }
       }, { capture: true, passive: true });
+
+      // Listen for messages from parent window if running inside iframe
+      if (window.self !== window.top) {
+        window.addEventListener('message', (event) => {
+          try {
+            const { type, clicks } = event.data || {};
+            if (type === 'aos-resolve' && Array.isArray(clicks)) {
+              const resolvedPoints = clicks.map(click => {
+                let el = null;
+                if (click.selector && click.selector !== 'body' && click.selector !== 'html' && click.selector !== 'main' && click.selector !== 'unknown') {
+                  try {
+                    el = document.querySelector(click.selector);
+                  } catch (selectorErr) {
+                    // Ignore query selector errors
+                  }
+                }
+
+                if (el) {
+                  const rect = el.getBoundingClientRect();
+                  const offX = typeof click.offsetX === 'number' ? click.offsetX : rect.width / 2;
+                  const offY = typeof click.offsetY === 'number' ? click.offsetY : rect.height / 2;
+                  return {
+                    x: Math.round(rect.left + window.scrollX + offX),
+                    y: Math.round(rect.top + window.scrollY + offY),
+                    count: click.count || 1,
+                  };
+                } else {
+                  // Fallback to page-center relative x and absolute y coordinates
+                  const drawX = typeof click.x === 'number'
+                    ? Math.round((document.body.clientWidth / 2) + click.x)
+                    : 0;
+                  return {
+                    x: drawX,
+                    y: click.y || 0,
+                    count: click.count || 1,
+                  };
+                }
+              });
+
+              window.parent.postMessage({ type: 'aos-resolved', points: resolvedPoints }, '*');
+            }
+          } catch (msgErr) {
+            logError('Message resolution error', msgErr);
+          }
+        });
+
+        // Set up dynamic iframe resizing
+        const sendHeight = () => {
+          try {
+            const height = Math.max(
+              document.body.scrollHeight,
+              document.documentElement.scrollHeight,
+              document.body.offsetHeight,
+              document.documentElement.offsetHeight,
+              document.body.clientHeight,
+              document.documentElement.clientHeight
+            );
+            window.parent.postMessage({ type: 'aos-resize', height }, '*');
+          } catch (heightErr) {
+            // Ignore cross-origin issues or document access errors
+          }
+        };
+
+        sendHeight();
+        window.addEventListener('load', sendHeight);
+        window.addEventListener('resize', sendHeight);
+
+        if (window.MutationObserver && document.body) {
+          const observer = new MutationObserver(sendHeight);
+          observer.observe(document.body, { attributes: true, childList: true, subtree: true });
+        }
+
+        // Notify dashboard parent window that tracker is initialized and ready
+        window.parent.postMessage({ type: 'aos-ready' }, '*');
+      }
 
       flushTimer = setInterval(flush, FLUSH_INTERVAL_MS);
 

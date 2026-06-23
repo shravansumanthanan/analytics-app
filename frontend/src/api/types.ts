@@ -50,4 +50,7 @@ export interface HeatmapPoint {
   x: number;
   y: number;
   count: number;
+  offsetX?: number;
+  offsetY?: number;
+  selector?: string;
 }

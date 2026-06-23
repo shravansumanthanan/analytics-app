@@ -34,9 +34,21 @@ export class EventRepository {
    * Fetch click coordinates for a given page URL.
    * Projects only the fields needed by the heatmap — avoids over-fetching.
    */
-  async findClicksByUrl(url: string): Promise<ClickPoint[]> {
-    const docs = await EventModel.find({ url, type: 'click' })
-      .select({ 'data.x': 1, 'data.y': 1, _id: 0 })
+  async findClicksByUrl(url: string, sessionId?: string): Promise<ClickPoint[]> {
+    const query: any = { url, type: 'click' };
+    if (sessionId) {
+      query.sessionId = sessionId;
+    }
+
+    const docs = await EventModel.find(query)
+      .select({ 
+        'data.x': 1, 
+        'data.y': 1, 
+        'data.offsetX': 1, 
+        'data.offsetY': 1, 
+        'data.selector': 1, 
+        _id: 0 
+      })
       .lean()
       .exec();
 
@@ -45,6 +57,9 @@ export class EventRepository {
       .map((doc: any) => ({
         x: doc.data.x,
         y: doc.data.y,
+        offsetX: doc.data.offsetX,
+        offsetY: doc.data.offsetY,
+        selector: doc.data.selector,
         count: 1
       }));
   }

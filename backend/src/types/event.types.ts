@@ -22,6 +22,9 @@ export interface ClickPoint {
   readonly x: number;
   readonly y: number;
   readonly count: number;
+  readonly offsetX?: number;
+  readonly offsetY?: number;
+  readonly selector?: string;
 }
 
 /** Session summary returned by GET /api/sessions. */

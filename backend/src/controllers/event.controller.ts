@@ -67,8 +67,8 @@ export class EventController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const { url } = req.query;
-      const points = await this.eventService.getClickHeatmap(url);
+      const { url, sessionId } = req.query;
+      const points = await this.eventService.getClickHeatmap(url, sessionId);
       res.json({ success: true, url, data: points });
     } catch (err) {
       next(err);
