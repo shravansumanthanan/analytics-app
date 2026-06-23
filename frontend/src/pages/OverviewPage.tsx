@@ -1,9 +1,23 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
-import { useSessions } from '../api/hooks';
+import { useSearchParams } from 'react-router-dom';
+import { useSessions, type SessionFilters } from '../api/hooks';
 import { WarningCircle } from '@phosphor-icons/react';
+import { FilterBar } from '../components/ui/FilterBar';
 
 export function OverviewPage() {
-  const { sessions, isLoading, isError } = useSessions();
+  const [searchParams] = useSearchParams();
+  const filters: SessionFilters = {
+    startDate: searchParams.get('startDate') || undefined,
+    endDate: searchParams.get('endDate') || undefined,
+    device: (searchParams.get('device') as any) || 'all',
+    frustratedOnly: searchParams.get('frustratedOnly') === 'true',
+    visitedPath: searchParams.get('visitedPath') || undefined,
+    clickedSelector: searchParams.get('clickedSelector') || undefined,
+    hasError: searchParams.get('hasError') === 'true' || undefined,
+    customEvent: searchParams.get('customEvent') || undefined,
+  };
+
+  const { sessions, isLoading, isError } = useSessions(filters);
 
   if (isError) {
     return (
@@ -63,6 +77,8 @@ export function OverviewPage() {
         <h1 className="text-3xl font-mono text-zinc-50 tracking-tight">Overview</h1>
         <p className="text-sm text-zinc-400 mt-1">System telemetry and active sessions.</p>
       </div>
+
+      <FilterBar />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-6 rounded-lg border border-zinc-800 bg-zinc-950/50">

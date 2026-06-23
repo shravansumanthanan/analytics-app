@@ -7,7 +7,7 @@ const trackerScript = fs.readFileSync(path.resolve(__dirname, '../../tracker/tra
 test.describe('Tracker Resilience & Behavior', () => {
   test.beforeEach(async ({ page }) => {
     // Route any generic events to a mock handler to prevent real network requests
-    await page.route('http://localhost:4000/api/events', route => {
+    await page.route('http://localhost:4000/api/**', route => {
       route.fulfill({ status: 202, body: JSON.stringify({ success: true }) });
     });
   });
@@ -56,7 +56,7 @@ test.describe('Tracker Resilience & Behavior', () => {
     let requestCount = 0;
     
     // Simulate a failing network request (e.g. ad blocker)
-    await page.route('http://localhost:4000/api/events', async route => {
+    await page.route('http://localhost:4000/api/**', async route => {
       requestCount++;
       await route.abort('failed');
     });
@@ -66,7 +66,7 @@ test.describe('Tracker Resilience & Behavior', () => {
       if (msg.type() === 'error') {
         const text = msg.text();
         // Ignore expected browser-level network failure logs
-        if (text.includes('Failed to load resource: net::ERR_FAILED')) {
+        if (text.includes('Failed to load resource: net::ERR_FAILED') || text.includes('Failed to load resource: net::ERR_CONNECTION_REFUSED')) {
           return;
         }
         

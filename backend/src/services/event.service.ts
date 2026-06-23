@@ -48,12 +48,25 @@ export class EventService {
   }
 
   /** Return click coordinates for the heatmap view. */
-  async getClickHeatmap(url: string, sessionId?: string): Promise<ClickPoint[]> {
-    return this.eventRepo.findClicksByUrl(url, sessionId);
+  async getClickHeatmap(
+    url: string, 
+    sessionId?: string, 
+    filters?: { convertedOnly?: boolean; conversionPath?: string; conversionEvent?: string; includeBots?: boolean }
+  ): Promise<ClickPoint[]> {
+    return this.eventRepo.findClicksByUrl(url, sessionId, filters);
+  }
+
+  /** Return scroll attention data for the heatmap view. */
+  async getAttentionHeatmap(url: string, sessionId?: string): Promise<Record<string, number>> {
+    return this.eventRepo.findAttentionByUrl(url, sessionId);
   }
 
   /** Return all URLs that have recorded click events. */
   async getTrackedUrls(): Promise<string[]> {
     return this.eventRepo.findDistinctClickUrls();
+  }
+
+  async getExportEvents(filters: { startDate?: string; endDate?: string; page?: number; limit?: number }): Promise<{ total: number; events: IEvent[] }> {
+    return this.eventRepo.findExportEvents(filters);
   }
 }

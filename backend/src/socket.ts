@@ -21,6 +21,19 @@ export function initSocketServer(server: HttpServer): void {
   io.on('connection', (socket) => {
     console.log(`[Socket] Client connected: ${socket.id}`);
 
+    // Join room for session live viewing
+    socket.on('join-session-room', (sessionId: string) => {
+      socket.join(`session:${sessionId}`);
+      console.log(`[Socket] Client ${socket.id} joined room session:${sessionId}`);
+    });
+
+    // Receive live telemetry / recording events from tracker and broadcast
+    socket.on('live-recording-event', (data: { sessionId: string; events: any[] }) => {
+      if (data && data.sessionId && data.events) {
+        socket.to(`session:${data.sessionId}`).emit('live-recording-stream', data.events);
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log(`[Socket] Client disconnected: ${socket.id}`);
     });

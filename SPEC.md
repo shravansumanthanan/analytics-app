@@ -1,4 +1,4 @@
-# Spec: CausalFunnel User Analytics Application
+# Spec: AnalyticsOS User Analytics Application
 
 ## Objective
 

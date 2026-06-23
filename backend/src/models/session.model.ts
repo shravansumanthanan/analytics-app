@@ -12,6 +12,8 @@ export interface ISession extends Document {
   firstSeen: Date;
   lastSeen: Date;
   eventCount: number;
+  frustrationCount: number;
+  isBot?: boolean;
 }
 
 const SessionSchema = new Schema<ISession>(
@@ -22,6 +24,8 @@ const SessionSchema = new Schema<ISession>(
     firstSeen: { type: Date, required: true },
     lastSeen: { type: Date, required: true },
     eventCount: { type: Number, required: true, default: 0 },
+    frustrationCount: { type: Number, required: true, default: 0 },
+    isBot: { type: Boolean, default: false, index: true },
   },
   {
     versionKey: false,

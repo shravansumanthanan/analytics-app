@@ -12,12 +12,23 @@ export class SessionController {
    * Returns all sessions ordered by most-recently-active.
    */
   getAll = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const sessions = await this.sessionService.getAllSessions();
+      const filters = {
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
+        device: req.query.device as 'mobile' | 'desktop' | 'all',
+        frustratedOnly: req.query.frustratedOnly === 'true',
+        visitedPath: req.query.visitedPath as string,
+        clickedSelector: req.query.clickedSelector as string,
+        hasError: req.query.hasError === 'true',
+        customEvent: req.query.customEvent as string,
+        includeBots: req.query.includeBots === 'true',
+      };
+      const sessions = await this.sessionService.getAllSessions(filters);
       res.json({ success: true, data: sessions });
     } catch (err) {
       next(err);

@@ -1,10 +1,23 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { useSessions } from '../api/hooks';
+import { useSessions, type SessionFilters } from '../api/hooks';
 import { Monitor, Phone, WarningCircle } from '@phosphor-icons/react';
+import { FilterBar } from '../components/ui/FilterBar';
 
 export function SessionsPage() {
-  const { sessions, isLoading, isError } = useSessions();
+  const [searchParams] = useSearchParams();
+  const filters: SessionFilters = {
+    startDate: searchParams.get('startDate') || undefined,
+    endDate: searchParams.get('endDate') || undefined,
+    device: (searchParams.get('device') as any) || 'all',
+    frustratedOnly: searchParams.get('frustratedOnly') === 'true',
+    visitedPath: searchParams.get('visitedPath') || undefined,
+    clickedSelector: searchParams.get('clickedSelector') || undefined,
+    hasError: searchParams.get('hasError') === 'true' || undefined,
+    customEvent: searchParams.get('customEvent') || undefined,
+    includeBots: searchParams.get('includeBots') === 'true',
+  };
+  const { sessions, isLoading, isError } = useSessions(filters);
 
   if (isError) {
     return (
@@ -25,6 +38,8 @@ export function SessionsPage() {
         <h1 className="text-3xl font-mono text-zinc-50 tracking-tight">Sessions</h1>
         <p className="text-sm text-zinc-400 mt-1">Raw session logs and telemetry data.</p>
       </div>
+
+      <FilterBar />
 
       <div className="border border-zinc-800 rounded-lg bg-zinc-950/50 overflow-hidden">
         <table className="w-full text-sm text-left">

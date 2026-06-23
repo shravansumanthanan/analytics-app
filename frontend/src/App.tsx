@@ -6,6 +6,8 @@ import { SessionsPage } from './pages/SessionsPage';
 import { SessionDetailsPage } from './pages/SessionDetailsPage';
 import { HeatmapsPage } from './pages/HeatmapsPage';
 import { OverviewPage } from './pages/OverviewPage';
+import { FunnelPage } from './pages/FunnelPage';
+import { EventsPage } from './pages/EventsPage';
 import {
   authEvents,
   AUTH_REQUIRED_EVENT,
@@ -54,7 +56,11 @@ const router = createBrowserRouter([
       },
       {
         path: 'events',
-        element: <div className="p-8"><h1 className="text-2xl font-mono mb-4 text-zinc-50 tracking-tight">Events</h1><p className="text-zinc-400 text-sm">Events feed coming soon.</p></div>,
+        element: <EventsPage />,
+      },
+      {
+        path: 'funnels',
+        element: <FunnelPage />,
       }
     ],
   },

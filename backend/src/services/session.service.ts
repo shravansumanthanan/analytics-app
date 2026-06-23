@@ -8,8 +8,8 @@ import { NotFoundError } from '../middleware/app-error';
 export class SessionService {
   constructor(private readonly sessionRepo: SessionRepository) {}
 
-  async getAllSessions(): Promise<SessionSummary[]> {
-    return this.sessionRepo.findAll();
+  async getAllSessions(filters: any = {}): Promise<SessionSummary[]> {
+    return this.sessionRepo.findAll(filters);
   }
 
   /**
@@ -21,5 +21,9 @@ export class SessionService {
     if (!exists) {
       throw new NotFoundError(`Session '${sessionId}'`);
     }
+  }
+
+  async getExportSessions(filters: { startDate?: string; endDate?: string; page?: number; limit?: number }) {
+    return this.sessionRepo.findExportSessions(filters);
   }
 }

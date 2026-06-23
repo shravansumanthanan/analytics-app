@@ -14,6 +14,7 @@ export interface IEvent extends Document {
   url: string;
   timestamp: Date;
   userAgent?: string;
+  isBot?: boolean;
   data?: Record<string, any>;
 }
 
@@ -22,10 +23,11 @@ const EventSchema = new Schema<IEvent>(
     sessionId: { type: String, required: true, index: true },
     visitorId: { type: String },
     projectId: { type: String },
-    type: { type: String, enum: ['page_view', 'click', 'custom'] as EventType[], required: true },
+    type: { type: String, enum: ['page_view', 'click', 'custom', 'scroll_depth', 'mouse_move', 'js_error', 'quickback', 'excessive_scroll', 'page_refresh_frustration', 'scroll_attention', 'rage_click', 'dead_click'] as EventType[], required: true },
     url: { type: String, required: true },
     timestamp: { type: Date, required: true },
     userAgent: { type: String },
+    isBot: { type: Boolean, default: false, index: true },
     data: { type: Schema.Types.Mixed },
   },
   {

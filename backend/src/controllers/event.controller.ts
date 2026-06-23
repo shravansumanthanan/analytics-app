@@ -62,14 +62,24 @@ export class EventController {
    * Returns click coordinates for the heatmap visualisation.
    */
   getHeatmap = async (
-    req: Request<unknown, unknown, unknown, HeatmapQuery>,
+    req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const { url, sessionId } = req.query;
-      const points = await this.eventService.getClickHeatmap(url, sessionId);
-      res.json({ success: true, url, data: points });
+      const { url, type, sessionId, convertedOnly, conversionPath, conversionEvent, includeBots } = req.query as any as HeatmapQuery;
+      if (type === 'attention') {
+        const attentionData = await this.eventService.getAttentionHeatmap(url, sessionId);
+        res.json({ success: true, url, type, data: attentionData });
+      } else {
+        const points = await this.eventService.getClickHeatmap(url, sessionId, {
+          convertedOnly,
+          conversionPath,
+          conversionEvent,
+          includeBots,
+        });
+        res.json({ success: true, url, type, data: points });
+      }
     } catch (err) {
       next(err);
     }
