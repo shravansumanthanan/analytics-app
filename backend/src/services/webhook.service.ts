@@ -1,7 +1,4 @@
-import fs from 'fs';
-import path from 'path';
-
-const WEBHOOKS_FILE = path.join(__dirname, '../../config/webhooks.json');
+import { WebhookModel } from '../models/webhook.model';
 
 export interface Webhook {
   id: string;
@@ -9,75 +6,55 @@ export interface Webhook {
   createdAt: string;
 }
 
-// Ensure the config directory exists
-function ensureConfigDir() {
-  const dir = path.dirname(WEBHOOKS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
-/** Load registered webhooks from disk. */
-export function getWebhooks(): Webhook[] {
+/** Load registered webhooks from MongoDB. */
+export async function getWebhooks(): Promise<Webhook[]> {
   try {
-    ensureConfigDir();
-    if (!fs.existsSync(WEBHOOKS_FILE)) {
-      return [];
-    }
-    const data = fs.readFileSync(WEBHOOKS_FILE, 'utf8');
-    return JSON.parse(data) as Webhook[];
+    const docs = await WebhookModel.find().lean().exec();
+    return docs.map(doc => ({
+      id: (doc as any)._id.toString(),
+      url: doc.url,
+      createdAt: doc.createdAt.toISOString()
+    }));
   } catch (err) {
-    console.error('AOS Webhooks: Failed to load webhooks config', err);
+    console.error('AOS Webhooks: Failed to load webhooks', err);
     return [];
   }
 }
 
-/** Save registered webhooks to disk. */
-export function saveWebhooks(webhooks: Webhook[]): void {
-  try {
-    ensureConfigDir();
-    fs.writeFileSync(WEBHOOKS_FILE, JSON.stringify(webhooks, null, 2), 'utf8');
-  } catch (err) {
-    console.error('AOS Webhooks: Failed to save webhooks config', err);
+/** Register a new webhook endpoint in MongoDB. */
+export async function registerWebhook(url: string): Promise<Webhook> {
+  const existing = await WebhookModel.findOne({ url }).lean().exec();
+  if (existing) {
+    return {
+      id: (existing as any)._id.toString(),
+      url: existing.url,
+      createdAt: existing.createdAt.toISOString()
+    };
   }
-}
 
-/** Register a new webhook endpoint. */
-export function registerWebhook(url: string): Webhook {
-  const webhooks = getWebhooks();
-  
-  // Prevent duplicate urls
-  const existing = webhooks.find(w => w.url === url);
-  if (existing) return existing;
-
-  const newWebhook: Webhook = {
-    id: Math.random().toString(36).substring(2, 9),
-    url,
-    createdAt: new Date().toISOString(),
+  const doc = await WebhookModel.create({ url });
+  return {
+    id: doc._id.toString(),
+    url: doc.url,
+    createdAt: doc.createdAt.toISOString()
   };
-
-  webhooks.push(newWebhook);
-  saveWebhooks(webhooks);
-  return newWebhook;
 }
 
-/** Delete a registered webhook. */
-export function deleteWebhook(id: string): boolean {
-  const webhooks = getWebhooks();
-  const index = webhooks.findIndex(w => w.id === id);
-  if (index === -1) return false;
-
-  webhooks.splice(index, 1);
-  saveWebhooks(webhooks);
-  return true;
+/** Delete a registered webhook from MongoDB. */
+export async function deleteWebhook(id: string): Promise<boolean> {
+  try {
+    const result = await WebhookModel.deleteOne({ _id: id }).exec();
+    return result.deletedCount > 0;
+  } catch (err) {
+    return false;
+  }
 }
 
 /**
  * Dispatch an event to all registered webhooks asynchronously.
- * Uses fetch to send a JSON POST body with the event type and payload.
  */
 export async function triggerWebhooks(eventType: string, payload: any): Promise<void> {
-  const webhooks = getWebhooks();
+  const webhooks = await getWebhooks();
   if (webhooks.length === 0) return;
 
   const body = JSON.stringify({

@@ -4,7 +4,7 @@ import { getWebhooks, registerWebhook, deleteWebhook } from '../services/webhook
 export class WebhookController {
   getAll = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const webhooks = getWebhooks();
+      const webhooks = await getWebhooks();
       res.json({ success: true, data: webhooks });
     } catch (err) {
       next(err);
@@ -18,7 +18,7 @@ export class WebhookController {
         res.status(400).json({ success: false, message: 'Invalid URL. Must start with http or https.' });
         return;
       }
-      const webhook = registerWebhook(url);
+      const webhook = await registerWebhook(url);
       res.status(201).json({ success: true, data: webhook });
     } catch (err) {
       next(err);
@@ -28,7 +28,7 @@ export class WebhookController {
   delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
-      const success = deleteWebhook(id);
+      const success = await deleteWebhook(id);
       if (!success) {
         res.status(404).json({ success: false, message: 'Webhook not found' });
         return;
