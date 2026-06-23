@@ -5,17 +5,6 @@ import { WarningCircle } from '@phosphor-icons/react';
 export function OverviewPage() {
   const { sessions, isLoading, isError } = useSessions();
 
-  // Simple mock aggregation for the chart
-  const data = [
-    { name: 'Mon', sessions: 12 },
-    { name: 'Tue', sessions: 19 },
-    { name: 'Wed', sessions: 15 },
-    { name: 'Thu', sessions: 22 },
-    { name: 'Fri', sessions: 30 },
-    { name: 'Sat', sessions: 28 },
-    { name: 'Sun', sessions: 18 },
-  ];
-
   if (isError) {
     return (
       <div className="p-8 flex flex-col items-center justify-center h-[calc(100vh-4rem)] text-zinc-500">
@@ -28,6 +17,45 @@ export function OverviewPage() {
   if (isLoading) {
     return <div className="p-8 font-mono text-zinc-500">Loading metrics...</div>;
   }
+
+  // 1. Calculate Average Session Duration
+  const validSessions = sessions.filter(s => s.startedAt && s.lastActiveAt);
+  const totalDuration = validSessions.reduce((acc, s) => {
+    const start = new Date(s.startedAt).getTime();
+    const end = new Date(s.lastActiveAt).getTime();
+    return acc + Math.max(0, (end - start) / 1000);
+  }, 0);
+  const avgDurationSec = validSessions.length > 0 ? totalDuration / validSessions.length : 0;
+  
+  const m = Math.floor(avgDurationSec / 60);
+  const s = Math.round(avgDurationSec % 60);
+  const avgDurationStr = m > 0 ? `${m}m ${s}s` : `${s}s`;
+
+  // 2. Calculate Total Events Tracked
+  const totalEvents = sessions.reduce((acc, s) => acc + (s.eventCount || 0), 0);
+  const totalEventsStr = new Intl.NumberFormat().format(totalEvents);
+
+  // 3. Aggregate Sessions Over Time (Mon-Sun based on startedAt)
+  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const counts = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+  sessions.forEach(session => {
+    if (session.startedAt) {
+      const dayName = daysOfWeek[new Date(session.startedAt).getDay()];
+      if (dayName in counts) {
+        counts[dayName as keyof typeof counts]++;
+      }
+    }
+  });
+
+  const chartData = [
+    { name: 'Mon', sessions: counts.Mon },
+    { name: 'Tue', sessions: counts.Tue },
+    { name: 'Wed', sessions: counts.Wed },
+    { name: 'Thu', sessions: counts.Thu },
+    { name: 'Fri', sessions: counts.Fri },
+    { name: 'Sat', sessions: counts.Sat },
+    { name: 'Sun', sessions: counts.Sun },
+  ];
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
@@ -43,11 +71,11 @@ export function OverviewPage() {
         </div>
         <div className="p-6 rounded-lg border border-zinc-800 bg-zinc-950/50">
           <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-2">Avg Duration</p>
-          <div className="text-4xl font-mono text-zinc-50">1m 12s</div>
+          <div className="text-4xl font-mono text-zinc-50">{avgDurationStr}</div>
         </div>
         <div className="p-6 rounded-lg border border-zinc-800 bg-zinc-950/50">
           <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-2">Events Tracked</p>
-          <div className="text-4xl font-mono text-zinc-50">1,402</div>
+          <div className="text-4xl font-mono text-zinc-50">{totalEventsStr}</div>
         </div>
       </div>
 
@@ -55,7 +83,7 @@ export function OverviewPage() {
         <h2 className="text-sm font-mono text-zinc-400 mb-6 uppercase tracking-widest">Sessions Over Time</h2>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
               <XAxis 
                 dataKey="name" 
