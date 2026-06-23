@@ -208,8 +208,11 @@
             text = (target.innerText || '').substring(0, 50).trim();
           }
 
+          // Track horizontal coordinate relative to the body's center to ensure alignment across different screen sizes.
+          const xOffset = Math.round(e.pageX - (document.body.clientWidth / 2));
+
           trackEvent('click', {
-            x: e.pageX,
+            x: xOffset,
             y: e.pageY,
             selector: getSelector(target),
             text: text,

@@ -23,9 +23,15 @@ export function HeatmapsPage() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Auto-detect if coordinates are relative offsets from the center of the page
+    const isRelative = points.some(p => p.x < 0) || points.every(p => Math.abs(p.x) < canvas.width / 2);
+
     // Draw thermal points
     points.forEach(point => {
-      const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, 30);
+      const drawX = isRelative ? (canvas.width / 2) + point.x : point.x;
+      const drawY = point.y;
+
+      const gradient = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, 30);
       
       // Color grading based on click intensity
       if (point.count > 5) {
@@ -51,14 +57,14 @@ export function HeatmapsPage() {
       ctx.globalCompositeOperation = 'screen';
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(point.x, point.y, 30, 0, 2 * Math.PI);
+      ctx.arc(drawX, drawY, 30, 0, 2 * Math.PI);
       ctx.fill();
 
       // Draw center core dot
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
       ctx.beginPath();
-      ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
+      ctx.arc(drawX, drawY, 2, 0, 2 * Math.PI);
       ctx.fill();
     });
   }, [points]);
