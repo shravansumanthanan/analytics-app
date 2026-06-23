@@ -96,7 +96,7 @@ export function EventsPage() {
                 let urlPath = event.url;
                 try {
                   urlPath = new URL(event.url).pathname;
-                } catch (e) {
+                } catch {
                   // Fallback if not valid full URL
                 }
 

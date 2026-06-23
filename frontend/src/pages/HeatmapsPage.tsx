@@ -54,7 +54,9 @@ export function HeatmapsPage() {
     if (iframe && iframe.contentWindow) {
       try {
         iframe.contentWindow.postMessage({ type: 'aos-clear-overlays' }, '*');
-      } catch (e) {}
+      } catch {
+        // Ignored
+      }
     }
   }, [activeUrl, selectedSession, heatmapType, convertedOnly, goalValue]);
 
