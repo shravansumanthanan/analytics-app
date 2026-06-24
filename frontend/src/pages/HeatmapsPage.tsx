@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTrackedUrls, useHeatmap, useSessions } from '../api/hooks';
 import { 
   MapTrifold, Crosshair, WarningCircle, CursorClick, 
-  SelectionBackground, Hourglass, Funnel 
+  SelectionBackground, Hourglass, Funnel
 } from '@phosphor-icons/react';
 import type { HeatmapPoint } from '../api/types';
 
@@ -18,6 +18,10 @@ export function HeatmapsPage() {
   const [convertedOnly, setConvertedOnly] = useState(false);
   const [goalType, setGoalType] = useState<'path' | 'event'>('path');
   const [goalValue, setGoalValue] = useState('');
+
+  // Tooltip inspect state
+  const [hoveredPoint, setHoveredPoint] = useState<any | null>(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
   // Derive the active URL without causing immediate synchronous re-renders
   const activeUrl = selectedUrl || (urls && urls.length > 0 ? urls[0] : null);
@@ -40,14 +44,15 @@ export function HeatmapsPage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const [resolvedPoints, setResolvedPoints] = useState<HeatmapPoint[]>([]);
-  const [iframeHeight, setIframeHeight] = useState(2000);
+  const [iframeHeight, setIframeHeight] = useState(1500);
   const [isIframeReady, setIsIframeReady] = useState(false);
 
   // Reset iframe state when URL, Session, Type, or Goal filter changes
   useEffect(() => {
     setIsIframeReady(false);
-    setIframeHeight(2000);
+    setIframeHeight(1500);
     setResolvedPoints([]);
+    setHoveredPoint(null);
     
     // Request clearing overlays in iframe if it was active
     const iframe = iframeRef.current;
@@ -262,6 +267,32 @@ export function HeatmapsPage() {
     }
   }, [resolvedPoints, points, heatmapType]);
 
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || heatmapType !== 'click') return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Find any points close to coordinates (e.g. 20 pixels radius)
+    const match = resolvedPoints.find(p => {
+      const dist = Math.sqrt(Math.pow(p.x - mouseX, 2) + Math.pow(p.y - mouseY, 2));
+      return dist < 20;
+    });
+
+    if (match) {
+      setHoveredPoint(match);
+      setTooltipPos({ x: mouseX, y: mouseY });
+    } else {
+      setHoveredPoint(null);
+    }
+  };
+
+  const handleCanvasMouseLeave = () => {
+    setHoveredPoint(null);
+  };
+
   if (isErrorUrls) {
     return (
       <div className="p-8 flex flex-col items-center justify-center h-full text-zinc-500 font-mono">
@@ -271,22 +302,31 @@ export function HeatmapsPage() {
     );
   }
 
+  // Calculate page statistics
+  const totalPageClicks = points && Array.isArray(points)
+    ? points.reduce((sum, p) => sum + (p.count || 1), 0)
+    : 0;
+  
+  const distinctElements = points && Array.isArray(points)
+    ? new Set(points.map(p => p.selector)).size
+    : 0;
+
   return (
-    <div className="p-8 max-w-7xl mx-auto h-[100dvh] flex flex-col space-y-6">
+    <div className="p-8 max-w-7xl mx-auto h-[100dvh] flex flex-col space-y-6 select-none">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 border-b border-zinc-800 pb-4">
         <div>
           <h1 className="text-3xl font-mono text-zinc-50 tracking-tight flex items-center gap-3">
             <MapTrifold weight="duotone" className="text-purple-500" />
             Heatmaps
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">Interaction density and attention maps.</p>
+          <p className="text-sm text-zinc-400 mt-1">Overlay interaction densities and scroll retention folds visually.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
           {/* Target URL */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">URL</span>
+            <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Target Path</span>
             <select 
               className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm rounded px-3 py-1.5 focus:outline-none focus:border-zinc-600 font-mono"
               value={activeUrl || ''}
@@ -295,14 +335,14 @@ export function HeatmapsPage() {
             >
               {urls.length === 0 && <option value="">No tracked URLs</option>}
               {urls.map(url => (
-                <option key={url} value={url}>{url}</option>
+                <option key={url} value={url}>{url.replace('http://localhost:3001', '') || '/'}</option>
               ))}
             </select>
           </div>
 
           {/* Session Filter */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Session</span>
+            <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">User Session</span>
             <select 
               className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm rounded px-3 py-1.5 focus:outline-none focus:border-zinc-600 font-mono max-w-[180px]"
               value={selectedSession}
@@ -311,7 +351,7 @@ export function HeatmapsPage() {
               <option value="">All Sessions</option>
               {sessions.map(session => (
                 <option key={session.id} value={session.id}>
-                  {session.id.substring(0, 8)}... ({session.userAgent.split(' ')[0] || 'Unknown Device'})
+                  {session.id.substring(0, 8)}... ({session.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'})
                 </option>
               ))}
             </select>
@@ -323,8 +363,25 @@ export function HeatmapsPage() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-0">
         
         {/* Sidebar Controls */}
-        <div className="lg:col-span-1 bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-5 space-y-6 flex flex-col justify-start">
+        <div className="lg:col-span-1 bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-5 space-y-5 flex flex-col justify-start overflow-y-auto">
           
+          {/* Page statistics card */}
+          {activeUrl && heatmapType !== 'attention' && (
+            <div className="p-4 bg-zinc-950 border border-zinc-850 rounded-lg space-y-3">
+              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest block">Page Click Telemetry</span>
+              <div className="grid grid-cols-2 gap-3 text-xs font-mono text-zinc-400">
+                <div>
+                  <span className="text-zinc-600 block text-[9px] uppercase">Total Clicks</span>
+                  <span className="text-zinc-200 text-lg font-bold">{totalPageClicks}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-600 block text-[9px] uppercase">Selectors</span>
+                  <span className="text-zinc-200 text-lg font-bold">{distinctElements}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Heatmap Type Button Group */}
           <div className="space-y-3">
             <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider">Map Mode</h3>
@@ -338,7 +395,7 @@ export function HeatmapsPage() {
                 }`}
               >
                 <CursorClick size={18} weight={heatmapType === 'click' ? 'fill' : 'regular'} />
-                <span>Click Map</span>
+                <span>Click Heatmap</span>
               </button>
               
               <button
@@ -350,7 +407,7 @@ export function HeatmapsPage() {
                 }`}
               >
                 <SelectionBackground size={18} weight={heatmapType === 'area' ? 'fill' : 'regular'} />
-                <span>Area Click Map</span>
+                <span>Area Maps</span>
               </button>
 
               <button
@@ -362,14 +419,14 @@ export function HeatmapsPage() {
                 }`}
               >
                 <Hourglass size={18} weight={heatmapType === 'attention' ? 'fill' : 'regular'} />
-                <span>Attention Map</span>
+                <span>Scroll Attention</span>
               </button>
             </div>
           </div>
 
-          <hr className="border-zinc-800" />
+          <hr className="border-zinc-850" />
 
-          {/* Conversion Segment filters (Hidden on Attention Map since it focuses on vertical view time) */}
+          {/* Conversion Segment filters */}
           {heatmapType !== 'attention' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -377,9 +434,6 @@ export function HeatmapsPage() {
                   <Funnel size={14} className="text-zinc-400" />
                   Goal Filters
                 </h3>
-                <span className="text-[9px] font-mono bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded uppercase tracking-wider">
-                  Conversion
-                </span>
               </div>
 
               <label className="flex items-center gap-2 cursor-pointer text-sm text-zinc-300 font-mono select-none">
@@ -389,13 +443,13 @@ export function HeatmapsPage() {
                   onChange={(e) => setConvertedOnly(e.target.checked)}
                   className="rounded bg-zinc-950 border-zinc-800 text-purple-600 focus:ring-purple-800 focus:ring-offset-zinc-900 w-4 h-4"
                 />
-                <span>Converting Sessions Only</span>
+                <span>Converted Only</span>
               </label>
 
               {convertedOnly && (
-                <div className="space-y-3 p-3 bg-zinc-950/50 border border-zinc-850 rounded-lg animate-fade-in space-y-3">
+                <div className="space-y-3 p-3 bg-zinc-950/50 border border-zinc-850 rounded-lg animate-fade-in">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Goal Metric</span>
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Goal Type</span>
                     <div className="flex rounded border border-zinc-800 overflow-hidden text-xs font-mono">
                       <button
                         onClick={() => { setGoalType('path'); setGoalValue(''); }}
@@ -403,7 +457,7 @@ export function HeatmapsPage() {
                           goalType === 'path' ? 'bg-zinc-850 text-zinc-200' : 'bg-transparent text-zinc-500'
                         }`}
                       >
-                        Destination
+                        Path
                       </button>
                       <button
                         onClick={() => { setGoalType('event'); setGoalValue(''); }}
@@ -418,13 +472,13 @@ export function HeatmapsPage() {
 
                   <div className="space-y-1">
                     <span className="text-[10px] font-mono text-zinc-500 uppercase">
-                      {goalType === 'path' ? 'URL Substring' : 'Event Name'}
+                      {goalType === 'path' ? 'Destination Path' : 'Event Key'}
                     </span>
                     <input
                       type="text"
                       value={goalValue}
                       onChange={(e) => setGoalValue(e.target.value)}
-                      placeholder={goalType === 'path' ? '/success' : 'checkout_completed'}
+                      placeholder={goalType === 'path' ? '/success' : 'subscribe'}
                       className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded px-2.5 py-1.5 focus:outline-none focus:border-zinc-700 font-mono"
                     />
                   </div>
@@ -433,10 +487,10 @@ export function HeatmapsPage() {
             </div>
           )}
 
-          {/* Legend Details */}
-          <div className="flex-1 flex flex-col justify-end space-y-3">
+          {/* Density legend */}
+          <div className="pt-4 border-t border-zinc-850 space-y-3">
             <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Density Legend</h4>
-            <div className="p-3 bg-zinc-950/30 border border-zinc-850/50 rounded-lg space-y-2">
+            <div className="p-3 bg-zinc-950/30 border border-zinc-850 rounded-lg space-y-2">
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-zinc-500">High Density</span>
                 <span className="w-3 h-3 rounded-full bg-red-500 border border-red-400" />
@@ -455,7 +509,7 @@ export function HeatmapsPage() {
 
         {/* Live Visual Map Canvas Container */}
         <div className="lg:col-span-3 relative border border-zinc-800 rounded-xl bg-zinc-950/50 overflow-hidden flex items-center justify-center isolate">
-          {/* Abstract background grid representing the page */}
+          {/* Abstract background grid */}
           <div 
             className="absolute inset-0 opacity-10 pointer-events-none"
             style={{
@@ -467,7 +521,7 @@ export function HeatmapsPage() {
           {!activeUrl ? (
             <div className="flex flex-col items-center text-zinc-500 gap-4">
               <Crosshair size={48} weight="duotone" className="opacity-50" />
-              <p className="font-mono text-sm uppercase tracking-widest">Select a URL to view heatmap</p>
+              <p className="font-mono text-sm uppercase tracking-widest animate-pulse">Select a URL to render heatmap</p>
             </div>
           ) : isErrorPoints ? (
             <div className="flex flex-col items-center text-zinc-500 gap-4">
@@ -475,7 +529,7 @@ export function HeatmapsPage() {
               <p className="font-mono text-sm uppercase tracking-widest">Failed to load heatmap data</p>
             </div>
           ) : isLoadingPoints ? (
-            <div className="font-mono text-zinc-500 animate-pulse">Rendering heatmap...</div>
+            <div className="font-mono text-zinc-500 animate-pulse">Querying coordinates...</div>
           ) : (
             <div className="absolute inset-0 overflow-auto flex justify-center bg-zinc-950/20">
               <div 
@@ -496,8 +550,29 @@ export function HeatmapsPage() {
                     ref={canvasRef} 
                     width={1200} 
                     height={iframeHeight} 
-                    className="absolute inset-0 pointer-events-none z-10"
+                    className="absolute inset-0 z-10 cursor-crosshair"
+                    onMouseMove={handleCanvasMouseMove}
+                    onMouseLeave={handleCanvasMouseLeave}
                   />
+                )}
+
+                {/* Floating canvas hover inspector tooltip */}
+                {hoveredPoint && (
+                  <div 
+                    className="absolute bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-[10px] font-mono text-zinc-300 shadow-2xl z-20 pointer-events-none max-w-[280px] leading-normal"
+                    style={{ left: `${tooltipPos.x + 15}px`, top: `${tooltipPos.y + 15}px` }}
+                  >
+                    <div className="font-bold text-purple-400">Selector:</div>
+                    <code className="text-zinc-200 break-all block bg-zinc-900 p-1 rounded border border-zinc-850 my-1">{hoveredPoint.selector || 'unknown element'}</code>
+                    <div className="flex justify-between items-center mt-2 border-t border-zinc-900 pt-1">
+                      <span>Total Clicks:</span>
+                      <span className="text-zinc-100 font-bold bg-zinc-900 px-1.5 rounded">{hoveredPoint.count} clicks</span>
+                    </div>
+                    <div className="flex justify-between items-center text-zinc-500 mt-1">
+                      <span>Coords:</span>
+                      <span>({hoveredPoint.x}px, {hoveredPoint.y}px)</span>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

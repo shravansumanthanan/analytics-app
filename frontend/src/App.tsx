@@ -8,6 +8,7 @@ import { HeatmapsPage } from './pages/HeatmapsPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { FunnelPage } from './pages/FunnelPage';
 import { EventsPage } from './pages/EventsPage';
+import { DemoCenterPage } from './pages/DemoCenterPage';
 import {
   authEvents,
   AUTH_REQUIRED_EVENT,
@@ -61,6 +62,10 @@ const router = createBrowserRouter([
       {
         path: 'funnels',
         element: <FunnelPage />,
+      },
+      {
+        path: 'demo-center',
+        element: <DemoCenterPage />,
       }
     ],
   },

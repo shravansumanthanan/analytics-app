@@ -8,6 +8,7 @@ import { AnnotationController } from '../controllers/annotation.controller';
 import { IntegrationController } from '../controllers/integration.controller';
 import { ExportController } from '../controllers/export.controller';
 import { WebhookController } from '../controllers/webhook.controller';
+import { SeedController } from '../controllers/seed.controller';
 
 import { EventRepository } from '../repositories/event.repository';
 import { SessionRepository } from '../repositories/session.repository';
@@ -50,6 +51,7 @@ const annotationController = new AnnotationController(annotationService);
 const integrationController = new IntegrationController(sessionService, eventService);
 const exportController = new ExportController(sessionService, eventService);
 const webhookController = new WebhookController();
+const seedController = new SeedController();
 
 const router = Router();
 
@@ -102,5 +104,9 @@ router.get('/integrations/powerbi', integrationController.getPowerBiData);
 // ── Data Export API ──────────────────────────────────────────────────────────
 router.get('/export/sessions', exportController.exportSessions);
 router.get('/export/events', exportController.exportEvents);
+
+// ── Demo Seeding ─────────────────────────────────────────────────────────────
+router.post('/seed', seedController.seed);
+router.post('/clear', seedController.clear);
 
 export default router;

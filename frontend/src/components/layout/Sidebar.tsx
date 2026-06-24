@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { ChartLineUp, ListDashes, MapTrifold, Target } from '@phosphor-icons/react';
+import { ChartLineUp, ListDashes, MapTrifold, Target, Sparkle } from '@phosphor-icons/react';
 import { cn } from '../../lib/utils';
 
 const navItems = [
@@ -7,6 +7,7 @@ const navItems = [
   { name: 'Sessions', path: '/sessions', icon: ListDashes },
   { name: 'Heatmaps', path: '/heatmaps', icon: MapTrifold },
   { name: 'Events', path: '/events', icon: Target },
+  { name: 'Demo Center', path: '/demo-center', icon: Sparkle },
 ];
 
 export function Sidebar() {

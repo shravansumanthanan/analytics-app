@@ -8,6 +8,18 @@ export interface Session {
   lastActiveAt: string;
   duration: number; // calculated field or raw
   eventCount: number; // calculated field
+  city?: string;
+  country?: string;
+  region?: string;
+  deviceType?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  isBot?: boolean;
+  bounce?: boolean;
+  frustrationCount?: number;
+  sessionDuration?: number;
+  pageViewsCount?: number;
 }
 
 export interface BaseEvent {
@@ -33,6 +45,9 @@ export interface ClickEvent extends BaseEvent {
     x: number;
     y: number;
     text?: string;
+    offsetX?: number;
+    offsetY?: number;
+    isFrustrated?: boolean;
   };
 }
 
