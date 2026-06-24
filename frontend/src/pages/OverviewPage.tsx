@@ -11,6 +11,7 @@ import {
 import { FilterBar } from '../components/ui/FilterBar';
 
 export function OverviewPage() {
+  const DEMO_STORE_URL = import.meta.env.VITE_DEMO_URL || 'http://localhost:3001';
   const [searchParams] = useSearchParams();
   const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
   
@@ -227,7 +228,7 @@ export function OverviewPage() {
               Seed Recruiter Data
             </Link>
             <a
-              href="http://localhost:3001"
+              href={DEMO_STORE_URL}
               target="_blank"
               rel="noreferrer"
               className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-mono text-sm rounded-lg transition-colors"

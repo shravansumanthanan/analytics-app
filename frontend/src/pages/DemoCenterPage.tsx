@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { socket } from '../api/socket';
-import { fetcher } from '../api/client';
+import { fetcher, API_BASE_URL } from '../api/client';
 import { 
   Sparkle, Trash, Check, Copy, 
   Terminal, ShieldCheck, Database, ArrowSquareOut,
   AppWindow, Info
 } from '@phosphor-icons/react';
 import { useSessions } from '../api/hooks';
+import { formatRelativeUrl } from '../utils/url';
 
 export function DemoCenterPage() {
   const [isSeeding, setIsSeeding] = useState(false);
@@ -16,7 +17,9 @@ export function DemoCenterPage() {
   const [liveEvents, setLiveEvents] = useState<any[]>([]);
   const { mutate: mutateSessions } = useSessions();
 
-  const trackerScriptUrl = `${window.location.origin.replace('3000', '4000')}/tracker.js`;
+  const trackerScriptUrl = `${API_BASE_URL.replace('/api', '')}/tracker.js`;
+  const DEMO_STORE_URL = import.meta.env.VITE_DEMO_URL || 'http://localhost:3001';
+
   const integrationCode = `<!-- Paste this in your website's <head> -->
 <script 
   src="${trackerScriptUrl}" 
@@ -143,7 +146,7 @@ export function DemoCenterPage() {
 
             <div className="pt-2">
               <a
-                href="http://localhost:3001"
+                href={DEMO_STORE_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-100 px-5 py-2.5 rounded font-mono text-sm font-bold transition-all"
@@ -216,7 +219,7 @@ export function DemoCenterPage() {
                   </div>
                   <div className="text-zinc-300 truncate font-mono text-xs">
                     <span className="text-zinc-500">URL: </span>
-                    {evt.url.replace('http://localhost:3001', '') || '/'}
+                    {formatRelativeUrl(evt.url)}
                   </div>
                   <div className="flex justify-between text-[10px] text-zinc-500">
                     <div>

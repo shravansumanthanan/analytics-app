@@ -5,6 +5,7 @@ import {
   SelectionBackground, Hourglass, Funnel
 } from '@phosphor-icons/react';
 import type { HeatmapPoint } from '../api/types';
+import { formatRelativeUrl } from '../utils/url';
 
 export function HeatmapsPage() {
   const { urls, isLoading: isLoadingUrls, isError: isErrorUrls } = useTrackedUrls();
@@ -335,7 +336,7 @@ export function HeatmapsPage() {
             >
               {urls.length === 0 && <option value="">No tracked URLs</option>}
               {urls.map(url => (
-                <option key={url} value={url}>{url.replace('http://localhost:3001', '') || '/'}</option>
+                <option key={url} value={url}>{formatRelativeUrl(url)}</option>
               ))}
             </select>
           </div>

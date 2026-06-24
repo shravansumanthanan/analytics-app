@@ -11,6 +11,7 @@ import {
   Flag
 } from '@phosphor-icons/react';
 import type { AnalyticsEvent } from '../api/types';
+import { formatRelativeUrl } from '../utils/url';
 
 export function SessionDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -116,10 +117,10 @@ export function SessionDetailsPage() {
       case 'page_view':
         return (
           <div className="text-xs text-zinc-400 mt-1">
-            Navigated to <span className="text-zinc-200 font-mono bg-zinc-950 px-1 py-0.5 rounded border border-zinc-900">{event.url.replace('http://localhost:3001', '') || '/'}</span>
+            Navigated to <span className="text-zinc-200 font-mono bg-zinc-950 px-1 py-0.5 rounded border border-zinc-900">{formatRelativeUrl(event.url)}</span>
             {event.data?.referrer && (
               <div className="text-[10px] text-zinc-600 mt-1 truncate">
-                Referrer: {event.data.referrer.replace('http://localhost:3001', '')}
+                Referrer: {formatRelativeUrl(event.data.referrer)}
               </div>
             )}
           </div>
@@ -174,7 +175,7 @@ export function SessionDetailsPage() {
             <div className="text-zinc-300 font-semibold mt-1 break-all">{event.data?.message}</div>
             {event.data?.source && (
               <div className="text-[9px] text-zinc-500 mt-1">
-                Source: {event.data.source.replace('http://localhost:3001', '')}:{event.data.lineno}
+                Source: {formatRelativeUrl(event.data.source)}:{event.data.lineno}
               </div>
             )}
           </div>
@@ -187,7 +188,7 @@ export function SessionDetailsPage() {
               Quickback Return
             </div>
             <p className="text-[10px] text-zinc-400 leading-normal">
-              Navigated away, then pressed back to return to <span className="text-zinc-200 font-mono">{event.data?.url.replace('http://localhost:3001', '')}</span> in less than 5 seconds.
+              Navigated away, then pressed back to return to <span className="text-zinc-200 font-mono">{formatRelativeUrl(event.data?.url)}</span> in less than 5 seconds.
             </p>
           </div>
         );
