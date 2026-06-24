@@ -77,7 +77,7 @@ export function SessionPlayer({ sessionId, isLive, seekToTimestamp, onGetCurrent
           newEvents.forEach((ev) => {
             try {
               replayerInstanceRef.current.addEvent(ev);
-            } catch (err) {
+            } catch {
               // Ignore invalid live events
             }
           });
@@ -93,7 +93,7 @@ export function SessionPlayer({ sessionId, isLive, seekToTimestamp, onGetCurrent
       if (replayerInstanceRef.current) {
         try {
           replayerInstanceRef.current.destroy();
-        } catch (e) {
+        } catch {
           // Ignore
         }
         replayerInstanceRef.current = null;
@@ -115,11 +115,11 @@ export function SessionPlayer({ sessionId, isLive, seekToTimestamp, onGetCurrent
         });
         replayer.startLive();
         replayerInstanceRef.current = replayer;
-      } catch (err) {
-        console.error('Failed to init live replayer', err);
+      } catch {
+        console.error('Failed to init live replayer');
       }
     }
-  }, [isLive, loaded, liveEvents.length]);
+  }, [isLive, loaded, liveEvents]);
 
   // Initialize historical player
   useEffect(() => {
@@ -138,8 +138,8 @@ export function SessionPlayer({ sessionId, isLive, seekToTimestamp, onGetCurrent
         },
       });
       replayerInstanceRef.current = player;
-    } catch (err) {
-      console.error('Failed to init rrweb-player', err);
+    } catch {
+      console.error('Failed to init rrweb-player');
     }
   }, [isLive, loaded, recordingEvents]);
 
@@ -148,8 +148,8 @@ export function SessionPlayer({ sessionId, isLive, seekToTimestamp, onGetCurrent
     if (!isLive && replayerInstanceRef.current && typeof seekToTimestamp === 'number') {
       try {
         replayerInstanceRef.current.goto(seekToTimestamp);
-      } catch (err) {
-        console.error('Failed to seek player', err);
+      } catch {
+        console.error('Failed to seek player');
       }
     }
   }, [seekToTimestamp, isLive]);
@@ -162,7 +162,7 @@ export function SessionPlayer({ sessionId, isLive, seekToTimestamp, onGetCurrent
         try {
           // In rrweb-player, player.player holds the Svelte component timer state
           return replayerInstanceRef.current.player?.playTime || replayerInstanceRef.current.replayer?.timer?.timeOffset || 0;
-        } catch (e) {
+        } catch {
           return 0;
         }
       });
@@ -216,7 +216,7 @@ export function SessionPlayer({ sessionId, isLive, seekToTimestamp, onGetCurrent
           if (replayerInstanceRef.current) {
             try {
               replayerInstanceRef.current.goto(ann.timestampMs);
-            } catch (err) {
+            } catch {
               // Ignore
             }
           }
