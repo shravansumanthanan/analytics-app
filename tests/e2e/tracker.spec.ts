@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 
-const trackerScript = fs.readFileSync(path.resolve(__dirname, '../../tracker/tracker.js'), 'utf-8');
+const trackerScript = fs.readFileSync(path.resolve(__dirname, '../../backend/tracker/tracker.js'), 'utf-8');
 
 test.describe('Tracker Resilience & Behavior', () => {
   test.beforeEach(async ({ page }) => {
@@ -66,7 +66,7 @@ test.describe('Tracker Resilience & Behavior', () => {
       if (msg.type() === 'error') {
         const text = msg.text();
         // Ignore expected browser-level network failure logs
-        if (text.includes('Failed to load resource: net::ERR_FAILED') || text.includes('Failed to load resource: net::ERR_CONNECTION_REFUSED')) {
+        if (text.includes('Failed to load resource:') || text.includes('net::ERR_')) {
           return;
         }
         

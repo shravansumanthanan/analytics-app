@@ -53,7 +53,11 @@
     } else if (scriptTag && scriptTag.src) {
       try {
         const urlObj = new URL(scriptTag.src);
-        ENDPOINT = urlObj.origin + '/api/events';
+        let origin = urlObj.origin;
+        if (origin.includes('localhost:3001') || origin.includes('127.0.0.1:3001')) {
+          origin = origin.replace('3001', '4000');
+        }
+        ENDPOINT = origin + '/api/events';
       } catch (e) {
         logWarn('Failed to parse script tag src URL', e);
       }

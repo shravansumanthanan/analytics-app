@@ -78,8 +78,10 @@ export class SeedController {
 
       const s1Events = [
         { type: 'page_view', url: 'http://localhost:3001/', offset: 0, data: { title: 'Acme Corp - Home', referrer: 'https://google.com' } },
+        { type: 'scroll_attention', url: 'http://localhost:3001/', offset: 5, data: { attentionMap: { '0': 5, '1': 4, '2': 3, '3': 2, '4': 1 } } },
         { type: 'click', url: 'http://localhost:3001/', offset: 15, data: { selector: 'button#hero-cta-main', x: 220, y: 410, offsetX: 20, offsetY: 12, text: 'Get Started Now' } },
         { type: 'page_view', url: 'http://localhost:3001/pricing', offset: 17, data: { title: 'Acme Corp - Pricing', referrer: 'http://localhost:3001/' } },
+        { type: 'scroll_attention', url: 'http://localhost:3001/pricing', offset: 30, data: { attentionMap: { '0': 2, '1': 3, '2': 5, '3': 8, '4': 6, '5': 4, '6': 2 } } },
         { type: 'scroll_depth', url: 'http://localhost:3001/pricing', offset: 45, data: { maxDepth: 75 } },
         { type: 'click', url: 'http://localhost:3001/pricing', offset: 60, data: { selector: 'button#pricing-pro-btn', x: 450, y: 820, offsetX: 45, offsetY: 10, text: 'Subscribe Pro' } },
         { type: 'page_view', url: 'http://localhost:3001/checkout', offset: 62, data: { title: 'Acme Corp - Checkout', referrer: 'http://localhost:3001/pricing' } },
@@ -116,6 +118,7 @@ export class SeedController {
 
       const s2Events = [
         { type: 'page_view', url: 'http://localhost:3001/', offset: 0, data: { title: 'Acme Corp - Home', referrer: 'https://t.co/' } },
+        { type: 'scroll_attention', url: 'http://localhost:3001/', offset: 3, data: { attentionMap: { '0': 8, '1': 6, '2': 3, '3': 1 } } },
         { type: 'click', url: 'http://localhost:3001/', offset: 10, data: { selector: 'a#nav-signup-btn', x: 340, y: 45, offsetX: 12, offsetY: 8, text: 'Sign Up' } },
         { type: 'page_view', url: 'http://localhost:3001/signup', offset: 12, data: { title: 'Acme Corp - Register', referrer: 'http://localhost:3001/' } },
         { type: 'click', url: 'http://localhost:3001/signup', offset: 25, data: { selector: 'button#submit-register', x: 180, y: 440, offsetX: 40, offsetY: 15, text: 'Register Account' } },
@@ -153,6 +156,7 @@ export class SeedController {
 
       const s3Events = [
         { type: 'page_view', url: 'http://localhost:3001/', offset: 0, data: { title: 'Acme Corp - Home', referrer: '' } },
+        { type: 'scroll_attention', url: 'http://localhost:3001/', offset: 10, data: { attentionMap: { '0': 10, '1': 12, '2': 15, '3': 8, '4': 5, '5': 3 } } },
         { type: 'click', url: 'http://localhost:3001/', offset: 40, data: { selector: 'button#hero-cta-secondary', x: 380, y: 410, offsetX: 35, offsetY: 12, text: 'Read Documentation' } },
         { type: 'page_view', url: 'http://localhost:3001/docs', offset: 43, data: { title: 'Acme Corp - Documentation', referrer: 'http://localhost:3001/' } },
         { type: 'js_error', url: 'http://localhost:3001/docs', offset: 90, data: { message: "TypeError: Cannot read properties of undefined (reading 'map') at setupLayout (docs.js:42:18)", source: 'http://localhost:3001/docs.js', lineno: 42, colno: 18 } }
@@ -358,10 +362,53 @@ export class SeedController {
             deviceType: loc.device,
           });
 
-          // Add click events on pages
+          // Add scroll attention for home page views
+          if (path === '/') {
+            const attentionOffset = pvOffset + 2;
+            eventsData.push({
+              sessionId: id,
+              visitorId: `vis_bg_00${idx + 8}`,
+              projectId: 'demo_project_001',
+              type: 'scroll_attention',
+              url: `http://localhost:3001${path}`,
+              timestamp: new Date(start.getTime() + attentionOffset * 1000),
+              userAgent: loc.userAgent,
+              isBot: false,
+              data: { attentionMap: { '0': 4 + Math.floor(Math.random() * 3), '1': 3 + Math.floor(Math.random() * 2), '2': 2 + Math.floor(Math.random() * 2), '3': 1 } },
+              country: loc.country,
+              region: loc.region,
+              city: loc.city,
+              utmSource: utm.s,
+              utmMedium: utm.m,
+              utmCampaign: utm.c,
+              deviceType: loc.device,
+            });
+          }
+
+          // Add click events on pages - cluster some clicks to create aggregation
           if (Math.random() > 0.4) {
             const clickOffset = pvOffset + 3 + Math.round(Math.random() * 5);
-            const selector = path === '/' ? 'button#hero-cta-main' : 'button.btn-outline';
+            
+            // Create hotspots by using consistent coordinates for the same selectors
+            let selector, baseX, baseY;
+            if (path === '/') {
+              // Hero CTA button hotspot - cluster clicks here
+              selector = 'button#hero-cta-main';
+              baseX = 220;
+              baseY = 410;
+            } else if (path === '/pricing') {
+              selector = 'button#pricing-pro-btn';
+              baseX = 450;
+              baseY = 820;
+            } else {
+              selector = 'button.btn-outline';
+              baseX = 200 + Math.round(Math.random() * 100);
+              baseY = 400 + Math.round(Math.random() * 100);
+            }
+            
+            // Add small variance to create realistic click clusters
+            const clickX = baseX + Math.round((Math.random() - 0.5) * 20);
+            const clickY = baseY + Math.round((Math.random() - 0.5) * 20);
             
             // Add dead clicks or rage clicks to some background sessions
             const clickType = (idx % 4 === 0 && p === 0) ? 'rage_click' : 'click';
@@ -375,7 +422,7 @@ export class SeedController {
               timestamp: new Date(start.getTime() + clickOffset * 1000),
               userAgent: loc.userAgent,
               isBot: false,
-              data: { selector, x: 200 + Math.round(Math.random() * 100), y: 400 + Math.round(Math.random() * 100), offsetX: 10, offsetY: 5, text: 'Click Link', isFrustrated: clickType === 'rage_click' },
+              data: { selector, x: clickX, y: clickY, offsetX: 10, offsetY: 5, text: 'Click Link', isFrustrated: clickType === 'rage_click' },
               country: loc.country,
               region: loc.region,
               city: loc.city,

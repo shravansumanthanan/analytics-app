@@ -39,7 +39,7 @@ export function createApp(): Application {
       cors({
         origin: '*',
         methods: ['POST', 'OPTIONS'],
-        allowedHeaders: ['Content-Type'],
+        allowedHeaders: ['Content-Type', 'X-API-Key'],
       })(req, res, next);
     } else {
       // Strict CORS for dashboard and other private endpoints

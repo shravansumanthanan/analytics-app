@@ -28,7 +28,7 @@ export function HeatmapsPage() {
   const activeUrl = selectedUrl || (urls && urls.length > 0 ? urls[0] : null);
 
   // Hook to fetch heatmap data (handles clicks / scroll attention based on type and conversion parameters)
-  const { points, isLoading: isLoadingPoints, isError: isErrorPoints } = useHeatmap(
+  const { points: rawPoints, isLoading: isLoadingPoints, isError: isErrorPoints } = useHeatmap(
     activeUrl,
     heatmapType === 'attention'
       ? { type: 'attention', sessionId: selectedSession || null }
@@ -40,6 +40,34 @@ export function HeatmapsPage() {
           conversionEvent: convertedOnly && goalType === 'event' ? goalValue : undefined
         }
   );
+
+  // Aggregate clicks by rounding coordinates to create hotspots
+  const points = Array.isArray(rawPoints) ? (() => {
+    const aggregationMap = new Map<string, any>();
+    
+    rawPoints.forEach(point => {
+      // Round coordinates to nearest 10 pixels to create clusters
+      const roundedX = Math.round(point.x / 10) * 10;
+      const roundedY = Math.round(point.y / 10) * 10;
+      const key = `${roundedX},${roundedY},${point.selector || 'unknown'}`;
+      
+      if (aggregationMap.has(key)) {
+        const existing = aggregationMap.get(key);
+        existing.count += 1;
+      } else {
+        aggregationMap.set(key, {
+          x: roundedX,
+          y: roundedY,
+          offsetX: point.offsetX,
+          offsetY: point.offsetY,
+          selector: point.selector,
+          count: 1
+        });
+      }
+    });
+    
+    return Array.from(aggregationMap.values());
+  })() : rawPoints;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -161,35 +189,39 @@ export function HeatmapsPage() {
 
         if (drawX < 0 || drawX > canvas.width || drawY < 0 || drawY > canvas.height) return;
 
-        const gradient = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, 30);
+        const gradient = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, 35);
         
-        if (point.count > 5) {
-          gradient.addColorStop(0, 'rgba(239, 68, 68, 0.85)');   // Red
-          gradient.addColorStop(0.3, 'rgba(245, 158, 11, 0.65)'); // Orange
-          gradient.addColorStop(0.6, 'rgba(234, 179, 8, 0.45)');   // Yellow
-          gradient.addColorStop(0.8, 'rgba(34, 197, 94, 0.2)');   // Green
+        // Adjust thresholds for better color distribution with low-count data
+        if (point.count >= 3) {
+          // High density - Red/Orange
+          gradient.addColorStop(0, 'rgba(239, 68, 68, 0.9)');   // Red
+          gradient.addColorStop(0.3, 'rgba(245, 158, 11, 0.7)'); // Orange
+          gradient.addColorStop(0.6, 'rgba(234, 179, 8, 0.5)');   // Yellow
+          gradient.addColorStop(0.8, 'rgba(34, 197, 94, 0.25)');   // Green
           gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');      // Blue/Fade
-        } else if (point.count > 2) {
-          gradient.addColorStop(0, 'rgba(234, 179, 8, 0.75)');    // Yellow
-          gradient.addColorStop(0.4, 'rgba(34, 197, 94, 0.45)');  // Green
-          gradient.addColorStop(0.8, 'rgba(59, 130, 246, 0.2)');   // Blue
+        } else if (point.count === 2) {
+          // Medium density - Yellow/Orange
+          gradient.addColorStop(0, 'rgba(245, 158, 11, 0.85)');    // Orange
+          gradient.addColorStop(0.4, 'rgba(234, 179, 8, 0.6)');    // Yellow
+          gradient.addColorStop(0.7, 'rgba(34, 197, 94, 0.3)');  // Green
           gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
         } else {
-          gradient.addColorStop(0, 'rgba(59, 130, 246, 0.7)');    // Blue
-          gradient.addColorStop(0.5, 'rgba(6, 182, 212, 0.35)');  // Cyan
+          // Low density - Blue/Cyan
+          gradient.addColorStop(0, 'rgba(59, 130, 246, 0.75)');    // Blue
+          gradient.addColorStop(0.5, 'rgba(6, 182, 212, 0.4)');  // Cyan
           gradient.addColorStop(1, 'rgba(6, 182, 212, 0)');
         }
         
         ctx.globalCompositeOperation = 'screen';
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(drawX, drawY, 30, 0, 2 * Math.PI);
+        ctx.arc(drawX, drawY, 35, 0, 2 * Math.PI);
         ctx.fill();
 
         ctx.globalCompositeOperation = 'source-over';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         ctx.beginPath();
-        ctx.arc(drawX, drawY, 2, 0, 2 * Math.PI);
+        ctx.arc(drawX, drawY, 3, 0, 2 * Math.PI);
         ctx.fill();
       });
     } else if (heatmapType === 'attention' && points && typeof points === 'object' && !Array.isArray(points)) {
@@ -493,15 +525,15 @@ export function HeatmapsPage() {
             <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Density Legend</h4>
             <div className="p-3 bg-zinc-950/30 border border-zinc-850 rounded-lg space-y-2">
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-zinc-500">High Density</span>
+                <span className="text-zinc-500">High (3+ clicks)</span>
                 <span className="w-3 h-3 rounded-full bg-red-500 border border-red-400" />
               </div>
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-zinc-500">Medium Density</span>
+                <span className="text-zinc-500">Medium (2 clicks)</span>
                 <span className="w-3 h-3 rounded-full bg-yellow-500 border border-yellow-400" />
               </div>
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-zinc-500">Low Density</span>
+                <span className="text-zinc-500">Low (1 click)</span>
                 <span className="w-3 h-3 rounded-full bg-blue-500 border border-blue-400" />
               </div>
             </div>
@@ -543,6 +575,7 @@ export function HeatmapsPage() {
                   src={activeUrl} 
                   className="absolute inset-0 w-full h-full border-0 select-none pointer-events-none opacity-85"
                   title="Heatmap Target Webpage"
+                  sandbox="allow-scripts allow-same-origin"
                 />
                 
                 {/* The canvas layered directly on top of the iframe */}
