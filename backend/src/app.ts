@@ -68,8 +68,8 @@ export function createApp(): Application {
   });
 
   // Serve the tracker folder statically
-  app.use(express.static(path.join(__dirname, '../../tracker')));
-  app.use('/demo', express.static(path.join(__dirname, '../../demo')));
+  app.use(express.static(path.join(__dirname, '../tracker')));
+  app.use('/demo', express.static(path.join(__dirname, '../demo')));
 
   // ── API routes ───────────────────────────────────────────────────────────────
   app.use('/api', router);
