@@ -18,7 +18,7 @@ export function DemoCenterPage() {
   const { mutate: mutateSessions } = useSessions();
 
   const trackerScriptUrl = `${API_BASE_URL.replace('/api', '')}/tracker.js`;
-  const DEMO_STORE_URL = import.meta.env.VITE_DEMO_URL || 'http://localhost:3001';
+  const DEMO_STORE_URL = import.meta.env.VITE_DEMO_URL || (API_BASE_URL.includes('localhost') ? 'http://localhost:3001' : `${API_BASE_URL.replace('/api', '')}/demo/`);
 
   const integrationCode = `<!-- Paste this in your website's <head> -->
 <script 

@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as ChartTooltip, Cell } from 'recharts';
 import { useSessions, type SessionFilters } from '../api/hooks';
 import { socket } from '../api/socket';
+import { API_BASE_URL } from '../api/client';
 import { 
   WarningCircle, Info, Pulse, Clock, Eye, 
   CursorClick, Bug, Monitor, Phone, Compass, TrendUp,
@@ -11,7 +12,7 @@ import {
 import { FilterBar } from '../components/ui/FilterBar';
 
 export function OverviewPage() {
-  const DEMO_STORE_URL = import.meta.env.VITE_DEMO_URL || 'http://localhost:3001';
+  const DEMO_STORE_URL = import.meta.env.VITE_DEMO_URL || (API_BASE_URL.includes('localhost') ? 'http://localhost:3001' : `${API_BASE_URL.replace('/api', '')}/demo/`);
   const [searchParams] = useSearchParams();
   const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
   

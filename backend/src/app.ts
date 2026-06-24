@@ -16,7 +16,10 @@ export function createApp(): Application {
   const app = express();
 
   // ── Security Headers (Helmet) ───────────────────────────────────────────────
-  app.use(helmet());
+  app.use(helmet({
+    frameguard: false,
+    contentSecurityPolicy: false,
+  }));
 
   // ── Rate Limiting ────────────────────────────────────────────────────────────
   const globalLimiter = rateLimit({
@@ -66,6 +69,7 @@ export function createApp(): Application {
 
   // Serve the tracker folder statically
   app.use(express.static(path.join(__dirname, '../../tracker')));
+  app.use('/demo', express.static(path.join(__dirname, '../../demo')));
 
   // ── API routes ───────────────────────────────────────────────────────────────
   app.use('/api', router);
