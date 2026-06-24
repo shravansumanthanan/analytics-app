@@ -84,7 +84,8 @@ RATE_LIMIT_MAX_REQUESTS=1000
    - Clusters → Connect → Connect your application
    - Copy connection string
    - Replace `<password>` with your actual password
-   - Example: `mongodb+srv://analyticsUser:YOUR_PASSWORD@cluster0.xxxxx.mongodb.net/analytics_db?retryWrites=true&w=majority`
+   - Paste the connection string into `MONGODB_URI` as an environment variable.
+   - Do not commit a real connection string or password into this guide.
 
 **Option B: Railway MongoDB Plugin (Easier but paid after trial)**
 
