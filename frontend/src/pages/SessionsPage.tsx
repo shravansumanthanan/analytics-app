@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from '../utils/date';
 import { useSessions, type SessionFilters } from '../api/hooks';
 import { 
   Monitor, Phone, WarningCircle, 

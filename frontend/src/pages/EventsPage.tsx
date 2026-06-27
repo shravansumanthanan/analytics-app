@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from '../utils/date';
 import { useEventsList, type ExportEvent } from '../api/hooks';
 import { WarningCircle, CaretLeft, CaretRight, Play } from '@phosphor-icons/react';
 

@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { format } from 'date-fns';
+import { format } from '../utils/date';
 import { useSessionEvents, useSessions, useAnnotations } from '../api/hooks';
 import { fetcher } from '../api/client';
 import { SessionPlayer } from '../components/ui/SessionPlayer';
