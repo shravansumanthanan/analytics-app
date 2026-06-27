@@ -1,26 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app';
 
-// Mock the repositories to bypass MongoDB
-vi.mock('../repositories/event.repository', () => {
+// Mock the query helpers to bypass MongoDB
+vi.mock('../utils/event-query', () => {
   return {
-    EventRepository: class {
-      bulkCreate = vi.fn().mockResolvedValue(undefined);
-      findClicksByUrl = vi.fn().mockResolvedValue([]);
-      findDistinctClickUrls = vi.fn().mockResolvedValue([]);
-      findBySessionId = vi.fn().mockResolvedValue([]);
-    }
+    bulkCreateEvents: vi.fn().mockResolvedValue(undefined),
+    findClicksByUrl: vi.fn().mockResolvedValue([]),
+    findDistinctClickUrls: vi.fn().mockResolvedValue([]),
+    findEventsBySessionId: vi.fn().mockResolvedValue([]),
+    findAttentionByUrl: vi.fn().mockResolvedValue({})
   };
 });
 
-vi.mock('../repositories/session.repository', () => {
+vi.mock('../utils/session-query', () => {
   return {
-    SessionRepository: class {
-      upsertSession = vi.fn().mockResolvedValue(undefined);
-      bulkUpsert = vi.fn().mockResolvedValue(undefined);
-      findById = vi.fn().mockResolvedValue(null);
-    }
+    bulkUpsertSessions: vi.fn().mockResolvedValue(undefined),
+    sessionExists: vi.fn().mockResolvedValue(true)
   };
 });
 

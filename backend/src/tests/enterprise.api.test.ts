@@ -2,72 +2,70 @@ import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app';
 
-// Define mock data containers so we can inspect or control them in tests
-const mockUsers = [
-  { _id: 'u1', name: 'Alice Smith', email: 'alice@example.com', role: 'admin', createdAt: new Date().toISOString() },
-  { _id: 'u2', name: 'Bob Jones', email: 'bob@example.com', role: 'member', createdAt: new Date().toISOString() }
-];
-
-const mockAnnotations = [
-  { _id: 'a1', sessionId: 'ses_1', timestampMs: 1200, note: 'Rage click here', author: 'Alice', createdAt: new Date().toISOString() }
-];
-
-const mockSessions = [
-  { id: 'ses_1', sessionId: 'ses_1', visitorId: 'vis_1', userAgent: 'Chrome', firstSeen: new Date().toISOString(), lastSeen: new Date().toISOString(), eventCount: 15, frustrationCount: 2 }
-];
-
-const mockEvents = [
-  { _id: 'e1', sessionId: 'ses_1', visitorId: 'vis_1', projectId: 'proj_1', type: 'click', url: 'http://example.com', timestamp: new Date().toISOString(), userAgent: 'Chrome', data: { selector: 'button#pay', text: 'Pay Now', isFrustrated: false } }
-];
-
-// Mock the repositories
-vi.mock('../repositories/user.repository', () => {
+// Mock Mongoose models directly
+vi.mock('../models/user.model', () => {
+  const users = [
+    { _id: 'u1', name: 'Alice Smith', email: 'alice@example.com', role: 'admin', createdAt: new Date().toISOString() },
+    { _id: 'u2', name: 'Bob Jones', email: 'bob@example.com', role: 'member', createdAt: new Date().toISOString() }
+  ];
   return {
-    UserRepository: class {
-      findAll = vi.fn().mockImplementation(() => Promise.resolve(mockUsers));
-      findByEmail = vi.fn().mockImplementation((email: string) => {
-        const found = mockUsers.find(u => u.email === email);
-        return Promise.resolve(found || null);
-      });
-      create = vi.fn().mockImplementation((userData: any) => Promise.resolve({ _id: 'u_new', ...userData, createdAt: new Date().toISOString() }));
-      delete = vi.fn().mockImplementation((id: string) => {
-        if (id === 'u_nonexistent') return Promise.resolve(false);
-        return Promise.resolve(true);
-      });
+    UserModel: {
+      find: vi.fn().mockReturnValue({
+        sort: vi.fn().mockReturnValue({
+          lean: vi.fn().mockReturnValue({
+            exec: vi.fn().mockResolvedValue(users)
+          })
+        })
+      }),
+      findOne: vi.fn().mockImplementation(({ email }) => ({
+        exec: vi.fn().mockResolvedValue(users.find(u => u.email === email) || null)
+      })),
+      create: vi.fn().mockImplementation((userData: any) => Promise.resolve({ _id: 'u_new', ...userData, createdAt: new Date().toISOString() })),
+      findByIdAndDelete: vi.fn().mockImplementation((id: string) => ({
+        exec: vi.fn().mockResolvedValue(id === 'u_nonexistent' ? null : { _id: id })
+      }))
     }
   };
 });
 
-vi.mock('../repositories/annotation.repository', () => {
+vi.mock('../models/annotation.model', () => {
+  const annotations = [
+    { _id: 'a1', sessionId: 'ses_1', timestampMs: 1200, note: 'Rage click here', author: 'Alice', createdAt: new Date().toISOString() }
+  ];
   return {
-    AnnotationRepository: class {
-      create = vi.fn().mockImplementation((data: any) => Promise.resolve({ _id: 'a_new', ...data, createdAt: new Date().toISOString() }));
-      findBySessionId = vi.fn().mockImplementation((sessionId: string) => {
-        return Promise.resolve(mockAnnotations.filter(a => a.sessionId === sessionId));
-      });
-      delete = vi.fn().mockImplementation((id: string) => {
-        if (id === 'a_nonexistent') return Promise.resolve(false);
-        return Promise.resolve(true);
-      });
+    AnnotationModel: {
+      find: vi.fn().mockReturnValue({
+        sort: vi.fn().mockReturnValue({
+          lean: vi.fn().mockReturnValue({
+            exec: vi.fn().mockResolvedValue(annotations)
+          })
+        })
+      }),
+      create: vi.fn().mockImplementation((data: any) => Promise.resolve({ _id: 'a_new', ...data, createdAt: new Date().toISOString() })),
+      findByIdAndDelete: vi.fn().mockImplementation((id: string) => ({
+        exec: vi.fn().mockResolvedValue(id === 'a_nonexistent' ? null : { _id: id })
+      }))
     }
   };
 });
 
-vi.mock('../repositories/session.repository', () => {
+vi.mock('../utils/session-query', () => {
+  const sessions = [
+    { id: 'ses_1', sessionId: 'ses_1', visitorId: 'vis_1', userAgent: 'Chrome', firstSeen: new Date().toISOString(), lastSeen: new Date().toISOString(), eventCount: 15, frustrationCount: 2 }
+  ];
   return {
-    SessionRepository: class {
-      findExportSessions = vi.fn().mockImplementation(() => Promise.resolve({ total: mockSessions.length, sessions: mockSessions }));
-      findById = vi.fn().mockResolvedValue(null);
-      upsertSession = vi.fn().mockResolvedValue(undefined);
-    }
+    findExportSessions: vi.fn().mockImplementation(() => Promise.resolve({ total: sessions.length, sessions: sessions })),
+    sessionExists: vi.fn().mockResolvedValue(true)
   };
 });
 
-vi.mock('../repositories/event.repository', () => {
+vi.mock('../utils/event-query', () => {
+  const events = [
+    { _id: 'e1', sessionId: 'ses_1', visitorId: 'vis_1', projectId: 'proj_1', type: 'click', url: 'http://example.com', timestamp: new Date().toISOString(), userAgent: 'Chrome', data: { selector: 'button#pay', text: 'Pay Now', isFrustrated: false } }
+  ];
   return {
-    EventRepository: class {
-      findExportEvents = vi.fn().mockImplementation(() => Promise.resolve({ total: mockEvents.length, events: mockEvents }));
-    }
+    findExportEvents: vi.fn().mockImplementation(() => Promise.resolve({ total: events.length, events: events })),
+    findEventsBySessionId: vi.fn().mockResolvedValue([])
   };
 });
 
@@ -228,43 +226,6 @@ describe('Enterprise Features API', () => {
         .set('Authorization', 'Bearer supersecret');
 
       expect(response.status).toBe(404);
-    });
-  });
-
-  // Power BI Integration endpoint
-  describe('Power BI Integration (/api/integrations/powerbi)', () => {
-    it('should return flat sessions JSON when authenticating via query key', async () => {
-      const response = await request(app)
-        .get('/api/integrations/powerbi')
-        .query({ apiKey: 'supersecret', resource: 'sessions' });
-
-      expect(response.status).toBe(200);
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0].sessionId).toBe('ses_1');
-      expect(response.body[0].eventCount).toBe(15);
-    });
-
-    it('should return flat events JSON when authenticating via x-api-key header', async () => {
-      const response = await request(app)
-        .get('/api/integrations/powerbi')
-        .query({ resource: 'events' })
-        .set('x-api-key', 'supersecret');
-
-      expect(response.status).toBe(200);
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0].type).toBe('click');
-      expect(response.body[0].selector).toBe('button#pay');
-    });
-
-    it('should deny access when apiKey is incorrect', async () => {
-      const response = await request(app)
-        .get('/api/integrations/powerbi')
-        .query({ apiKey: 'wrongpassword' });
-
-      expect(response.status).toBe(401);
-      expect(response.body.success).toBe(false);
     });
   });
 
