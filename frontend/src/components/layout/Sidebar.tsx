@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom';
 import { ChartLineUp, ListDashes, MapTrifold, Target, Sparkle, Funnel } from '@phosphor-icons/react';
-import { cn } from '../../lib/utils';
 
 const navItems = [
   { name: 'Overview', path: '/', icon: ChartLineUp },
@@ -32,12 +31,11 @@ export function Sidebar() {
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
-                isActive 
-                  ? "bg-zinc-800/80 text-zinc-50" 
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40"
-              )
+              `flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
+                isActive
+                  ? 'bg-zinc-800/80 text-zinc-50'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+              }`
             }
           >
             <item.icon className="w-4 h-4" weight="duotone" />

@@ -35,10 +35,10 @@ that demonstrates system design thinking — not just "working code."
 | Backend framework | Express | 4.x |
 | Validation | Zod | 3.x |
 | Database | MongoDB + Mongoose | 8.x |
-| Frontend framework | React | 18.x |
-| Frontend build | Vite | 5.x |
-| Frontend styling | Tailwind CSS | 3.x |
-| Routing | React Router | 6.x |
+| Frontend framework | React | 19.x |
+| Frontend build | Vite | 8.x |
+| Frontend styling | Tailwind CSS | 4.x |
+| Routing | React Router | 7.x |
 | Tracker | Vanilla JS (IIFE) | — |
 
 ---

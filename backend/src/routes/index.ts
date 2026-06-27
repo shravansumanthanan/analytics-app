@@ -14,9 +14,9 @@ import { EventRepository } from '../repositories/event.repository';
 import { SessionRepository } from '../repositories/session.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { AnnotationRepository } from '../repositories/annotation.repository';
+import { RecordingRepository } from '../repositories/recording.repository';
 
 import { EventService } from '../services/event.service';
-import { SessionService } from '../services/session.service';
 import { UserService } from '../services/user.service';
 import { AnnotationService } from '../services/annotation.service';
 
@@ -36,20 +36,20 @@ const eventRepo = new EventRepository();
 const sessionRepo = new SessionRepository();
 const userRepo = new UserRepository();
 const annotationRepo = new AnnotationRepository();
+const recordingRepo = new RecordingRepository();
 
 const eventService = new EventService(eventRepo, sessionRepo);
-const sessionService = new SessionService(sessionRepo);
 export const userService = new UserService(userRepo); // Exported to allow seeding on server startup
 const annotationService = new AnnotationService(annotationRepo);
 
-const eventController = new EventController(eventService, sessionService);
-const sessionController = new SessionController(sessionService);
+const eventController = new EventController(eventService, sessionRepo);
+const sessionController = new SessionController(sessionRepo);
 const funnelController = new FunnelController();
-const recordingController = new RecordingController();
+const recordingController = new RecordingController(recordingRepo);
 const userController = new UserController(userService);
 const annotationController = new AnnotationController(annotationService);
-const integrationController = new IntegrationController(sessionService, eventService);
-const exportController = new ExportController(sessionService, eventService);
+const integrationController = new IntegrationController(sessionRepo, eventService);
+const exportController = new ExportController(sessionRepo, eventService);
 const webhookController = new WebhookController();
 const seedController = new SeedController();
 

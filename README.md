@@ -57,9 +57,9 @@
 ### Technical Stack
 
 **Frontend:**
-- React 18 with TypeScript
+- React 19 with TypeScript
 - Vite for blazing-fast builds
-- TanStack Router for type-safe routing
+- React Router for routing
 - SWR for data fetching and caching
 - Recharts for data visualization
 - Socket.IO client for real-time updates
@@ -82,11 +82,11 @@
 
 ### Architecture Highlights
 
-**Clean Architecture:**
+**Backend Flow:**
 ```
 Controllers (HTTP boundary)
     ↓
-Services (Business logic)
+Services or repositories (business rules/data access)
     ↓
 Repositories (Data access)
     ↓

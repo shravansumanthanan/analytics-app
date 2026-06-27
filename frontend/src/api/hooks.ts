@@ -25,6 +25,16 @@ interface ApiResponse<T> {
   data: T;
 }
 
+function toQueryString(params: Record<string, string | number | boolean | null | undefined>) {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === false || value === 'all') continue;
+    search.append(key, value === true ? 'true' : String(value));
+  }
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
+
 /**
  * Hook to fetch all sessions
  */
@@ -41,18 +51,17 @@ export interface SessionFilters {
 }
 
 export function useSessions(filters?: SessionFilters) {
-  const params = new URLSearchParams();
-  if (filters?.startDate) params.append('startDate', filters.startDate);
-  if (filters?.endDate) params.append('endDate', filters.endDate);
-  if (filters?.device && filters.device !== 'all') params.append('device', filters.device);
-  if (filters?.frustratedOnly) params.append('frustratedOnly', 'true');
-  if (filters?.visitedPath) params.append('visitedPath', filters.visitedPath);
-  if (filters?.clickedSelector) params.append('clickedSelector', filters.clickedSelector);
-  if (filters?.hasError) params.append('hasError', 'true');
-  if (filters?.customEvent) params.append('customEvent', filters.customEvent);
-  if (filters?.includeBots) params.append('includeBots', 'true');
-
-  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const queryString = toQueryString({
+    startDate: filters?.startDate,
+    endDate: filters?.endDate,
+    device: filters?.device,
+    frustratedOnly: filters?.frustratedOnly,
+    visitedPath: filters?.visitedPath,
+    clickedSelector: filters?.clickedSelector,
+    hasError: filters?.hasError,
+    customEvent: filters?.customEvent,
+    includeBots: filters?.includeBots,
+  });
 
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<Session[]>>(
     `/sessions${queryString}`,
@@ -133,18 +142,16 @@ export interface HeatmapFilters {
 }
 
 export function useHeatmap(url: string | null, filters?: HeatmapFilters) {
-  const encodedUrl = url ? encodeURIComponent(url) : null;
-  
-  const params = new URLSearchParams();
-  if (url) params.append('url', url);
-  if (filters?.type) params.append('type', filters.type);
-  if (filters?.sessionId) params.append('sessionId', filters.sessionId);
-  if (filters?.convertedOnly) params.append('convertedOnly', 'true');
-  if (filters?.conversionPath) params.append('conversionPath', filters.conversionPath);
-  if (filters?.conversionEvent) params.append('conversionEvent', filters.conversionEvent);
-  if (filters?.includeBots) params.append('includeBots', 'true');
-
-  const queryUrl = encodedUrl ? `/heatmap?${params.toString()}` : null;
+  const queryString = toQueryString({
+    url,
+    type: filters?.type,
+    sessionId: filters?.sessionId,
+    convertedOnly: filters?.convertedOnly,
+    conversionPath: filters?.conversionPath,
+    conversionEvent: filters?.conversionEvent,
+    includeBots: filters?.includeBots,
+  });
+  const queryUrl = url ? `/heatmap${queryString}` : null;
 
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<any>>(
     queryUrl,
@@ -204,13 +211,12 @@ export function useFunnels() {
  * Hook to analyze a specific funnel
  */
 export function useFunnelAnalysis(funnelId: string | null, filters?: SessionFilters) {
-  const params = new URLSearchParams();
-  if (filters?.startDate) params.append('startDate', filters.startDate);
-  if (filters?.endDate) params.append('endDate', filters.endDate);
-  if (filters?.device && filters.device !== 'all') params.append('device', filters.device);
-  if (filters?.frustratedOnly) params.append('frustratedOnly', 'true');
-
-  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const queryString = toQueryString({
+    startDate: filters?.startDate,
+    endDate: filters?.endDate,
+    device: filters?.device,
+    frustratedOnly: filters?.frustratedOnly,
+  });
 
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<{ steps: FunnelStepResult[] }>>(
     funnelId ? `/funnels/${funnelId}/analysis${queryString}` : null,
@@ -292,10 +298,10 @@ export interface ExportEvent {
 }
 
 export function useEventsList(filters?: { page?: number; limit?: number }) {
-  const params = new URLSearchParams();
-  if (filters?.page) params.append('page', String(filters.page));
-  if (filters?.limit) params.append('limit', String(filters.limit));
-  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const queryString = toQueryString({
+    page: filters?.page,
+    limit: filters?.limit,
+  });
 
   const { data, error, isLoading, mutate } = useSWR<{ success: boolean; data: ExportEvent[]; total: number }>(
     `/export/events${queryString}`,

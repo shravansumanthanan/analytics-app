@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { SessionService } from '../services/session.service';
+import { SessionRepository } from '../repositories/session.repository';
 import { EventService } from '../services/event.service';
 import { env } from '../config/env';
 
 export class IntegrationController {
   constructor(
-    private readonly sessionService: SessionService,
+    private readonly sessionRepo: SessionRepository,
     private readonly eventService: EventService
   ) {}
 
@@ -49,7 +49,7 @@ export class IntegrationController {
         }));
         res.json(flatEvents);
       } else {
-        const { sessions } = await this.sessionService.getExportSessions({ limit: 10000 });
+        const { sessions } = await this.sessionRepo.findExportSessions({ limit: 10000 });
         const flatSessions = sessions.map((s: any) => ({
           sessionId: s.sessionId || s.id,
           visitorId: s.visitorId || '',

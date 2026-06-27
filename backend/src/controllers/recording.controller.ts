@@ -1,12 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { RecordingService } from '../services/recording.service';
+import { RecordingRepository } from '../repositories/recording.repository';
 
 export class RecordingController {
-  private recordingService: RecordingService;
-
-  constructor() {
-    this.recordingService = new RecordingService();
-  }
+  constructor(private readonly recordingRepo: RecordingRepository) {}
 
   /**
    * POST /api/sessions/:id/recording
@@ -22,7 +18,9 @@ export class RecordingController {
         return;
       }
 
-      await this.recordingService.addEvents(id, events);
+      if (id && events.length > 0) {
+        await this.recordingRepo.appendEvents(id, events);
+      }
       res.json({ success: true });
     } catch (err) {
       next(err);
@@ -36,8 +34,8 @@ export class RecordingController {
   get = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
-      const events = await this.recordingService.getRecording(id);
-      res.json({ success: true, data: events });
+      const recording = await this.recordingRepo.findBySessionId(id);
+      res.json({ success: true, data: recording?.events ?? [] });
     } catch (err) {
       next(err);
     }

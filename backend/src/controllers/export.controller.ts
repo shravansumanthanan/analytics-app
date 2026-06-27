@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { SessionService } from '../services/session.service';
+import { SessionRepository } from '../repositories/session.repository';
 import { EventService } from '../services/event.service';
 import { env } from '../config/env';
 
@@ -31,7 +31,7 @@ function convertToCSV(data: any[]): string {
 
 export class ExportController {
   constructor(
-    private readonly sessionService: SessionService,
+    private readonly sessionRepo: SessionRepository,
     private readonly eventService: EventService
   ) {}
 
@@ -59,7 +59,7 @@ export class ExportController {
       };
 
       const format = req.query.format as string || 'json';
-      const { total, sessions } = await this.sessionService.getExportSessions(filters);
+      const { total, sessions } = await this.sessionRepo.findExportSessions(filters);
 
       const flatSessions = sessions.map((s: any) => ({
         sessionId: s.sessionId || s.id,

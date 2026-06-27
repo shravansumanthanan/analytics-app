@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { EventService } from '../services/event.service';
-import { SessionService } from '../services/session.service';
+import { SessionRepository } from '../repositories/session.repository';
+import { NotFoundError } from '../middleware/app-error';
 import type { IngestEventsInput, HeatmapQuery } from '../schemas/event.schema';
 
 /**
@@ -16,7 +17,7 @@ import type { IngestEventsInput, HeatmapQuery } from '../schemas/event.schema';
 export class EventController {
   constructor(
     private readonly eventService: EventService,
-    private readonly sessionService: SessionService,
+    private readonly sessionRepo: SessionRepository,
   ) {}
 
   /**
@@ -49,8 +50,9 @@ export class EventController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      // Guard: 404 if the session doesn't exist.
-      await this.sessionService.assertSessionExists(id);
+      if (!(await this.sessionRepo.exists(id))) {
+        throw new NotFoundError(`Session '${id}'`);
+      }
       const events = await this.eventService.getSessionEvents(id);
       res.json({ success: true, data: events });
     } catch (err) {
