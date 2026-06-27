@@ -122,7 +122,7 @@ export class SeedController {
       res.status(201).json({
         success: true,
         message: 'Demo data seeded.',
-        data: { sessions: sessions.length, events: events.length },
+        counts: { sessions: sessions.length, events: events.length, recordings: 1 },
       });
     } catch (err) {
       next(err);
