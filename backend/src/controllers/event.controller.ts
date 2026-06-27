@@ -1,16 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { NotFoundError } from '../middleware/app-error';
 import type { IngestEventsInput, HeatmapQuery } from '../schemas/event.schema';
 import { writeBufferQueue } from '../services/write-buffer.queue';
-import { sessionExists } from '../utils/session-query';
-import {
-  findEventsBySessionId,
-  findClicksByUrl,
-  findAttentionByUrl,
-  findDistinctClickUrls
-} from '../utils/event-query';
+import { EventService } from '../services/event.service';
 
 export class EventController {
+  constructor(private eventService: EventService) {}
+
   /**
    * POST /api/events
    * Accepts a batch of one or more events.
@@ -40,10 +35,7 @@ export class EventController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      if (!(await sessionExists(id))) {
-        throw new NotFoundError(`Session '${id}'`);
-      }
-      const events = await findEventsBySessionId(id);
+      const events = await this.eventService.getSessionEvents(id);
       res.json({ success: true, data: events });
     } catch (err) {
       next(err);
@@ -60,19 +52,9 @@ export class EventController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const { url, type, sessionId, convertedOnly, conversionPath, conversionEvent, includeBots } = req.query as any as HeatmapQuery;
-      if (type === 'attention') {
-        const attentionData = await findAttentionByUrl(url, sessionId);
-        res.json({ success: true, url, type, data: attentionData });
-      } else {
-        const points = await findClicksByUrl(url, sessionId, {
-          convertedOnly,
-          conversionPath,
-          conversionEvent,
-          includeBots,
-        });
-        res.json({ success: true, url, type, data: points });
-      }
+      const query = req.query as unknown as HeatmapQuery;
+      const data = await this.eventService.getHeatmap(query);
+      res.json({ success: true, url: query.url, type: query.type, data });
     } catch (err) {
       next(err);
     }
@@ -88,7 +70,7 @@ export class EventController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const urls = await findDistinctClickUrls();
+      const urls = await this.eventService.getTrackedUrls();
       res.json({ success: true, data: urls });
     } catch (err) {
       next(err);

@@ -2,8 +2,8 @@ import type { TrackedEvent } from '../types/event.types';
 import { resolveIpLocation } from './geolocation.service';
 import { parseDeviceType } from '../utils/ua-parser';
 import { getSocketIO } from '../socket';
-import { bulkCreateEvents } from '../utils/event-query';
-import { bulkUpsertSessions } from '../utils/session-query';
+import { EventRepository } from '../repositories/event.repository';
+import { SessionRepository } from '../repositories/session.repository';
 
 export class WriteBufferQueue {
   private queue: Array<{ event: TrackedEvent; ip?: string }> = [];
@@ -11,6 +11,8 @@ export class WriteBufferQueue {
   private isProcessing = false;
   private readonly maxBufferSize = 100;
   private readonly flushIntervalMs = 2000;
+  private eventRepository = new EventRepository();
+  private sessionRepository = new SessionRepository();
 
   constructor() {
     this.startInterval();
@@ -88,8 +90,8 @@ export class WriteBufferQueue {
 
       // Write to database in single concurrent block
       await Promise.all([
-        bulkCreateEvents(enrichedEvents as any),
-        bulkUpsertSessions(enrichedEvents as any),
+        this.eventRepository.bulkCreateEvents(enrichedEvents as any),
+        this.sessionRepository.bulkUpsertSessions(enrichedEvents as any),
       ]);
 
       // Trigger socket broadcasts

@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { findAllSessions } from '../utils/session-query';
+import { SessionService } from '../services/session.service';
 
 /**
  * SessionController — handles session listing endpoint.
  */
 export class SessionController {
+  constructor(private sessionService: SessionService) {}
+
   /**
    * GET /api/sessions
    * Returns all sessions ordered by most-recently-active.
@@ -26,7 +28,7 @@ export class SessionController {
         customEvent: req.query.customEvent as string,
         includeBots: req.query.includeBots === 'true',
       };
-      const sessions = await findAllSessions(filters);
+      const sessions = await this.sessionService.getSessions(filters);
       res.json({ success: true, data: sessions });
     } catch (err) {
       next(err);

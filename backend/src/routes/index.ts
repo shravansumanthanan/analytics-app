@@ -8,20 +8,53 @@ import { AnnotationController } from '../controllers/annotation.controller';
 import { ExportController } from '../controllers/export.controller';
 import { SeedController } from '../controllers/seed.controller';
 
+import { SessionRepository } from '../repositories/session.repository';
+import { EventRepository } from '../repositories/event.repository';
+import { FunnelRepository } from '../repositories/funnel.repository';
+import { AnnotationRepository } from '../repositories/annotation.repository';
+import { RecordingRepository } from '../repositories/recording.repository';
+import { UserRepository } from '../repositories/user.repository';
+
+import { SessionService } from '../services/session.service';
+import { EventService } from '../services/event.service';
+import { FunnelService } from '../services/funnel.service';
+import { AnnotationService } from '../services/annotation.service';
+import { RecordingService } from '../services/recording.service';
+import { UserService } from '../services/user.service';
+import { ExportService } from '../services/export.service';
+import { SeedService } from '../services/seed.service';
+
 import { validate } from '../middleware/validate.middleware';
 import { authenticate, requireApiKey } from '../middleware/auth.middleware';
 import { ingestEventsSchema, heatmapQuerySchema } from '../schemas/event.schema';
 import { createUserSchema } from '../schemas/user.schema';
 import { createAnnotationSchema } from '../schemas/annotation.schema';
 
-const eventController = new EventController();
-const sessionController = new SessionController();
-const funnelController = new FunnelController();
-const recordingController = new RecordingController();
-const userController = new UserController();
-const annotationController = new AnnotationController();
-const exportController = new ExportController();
-const seedController = new SeedController();
+// ── Dependency Injection / composition root ──────────────────────────────────────
+const sessionRepository = new SessionRepository();
+const eventRepository = new EventRepository();
+const funnelRepository = new FunnelRepository();
+const annotationRepository = new AnnotationRepository();
+const recordingRepository = new RecordingRepository();
+const userRepository = new UserRepository();
+
+const sessionService = new SessionService(sessionRepository);
+const eventService = new EventService(eventRepository, sessionRepository);
+const funnelService = new FunnelService(funnelRepository, sessionRepository, eventRepository);
+const annotationService = new AnnotationService(annotationRepository);
+const recordingService = new RecordingService(recordingRepository);
+const userService = new UserService(userRepository);
+const exportService = new ExportService(sessionRepository, eventRepository);
+const seedService = new SeedService(sessionRepository, eventRepository, recordingRepository);
+
+const eventController = new EventController(eventService);
+const sessionController = new SessionController(sessionService);
+const funnelController = new FunnelController(funnelService);
+const recordingController = new RecordingController(recordingService);
+const userController = new UserController(userService);
+const annotationController = new AnnotationController(annotationService);
+const exportController = new ExportController(exportService);
+const seedController = new SeedController(seedService);
 
 const router = Router();
 
@@ -72,3 +105,4 @@ router.post('/seed', authenticate, seedController.seed);
 router.post('/clear', authenticate, seedController.clear);
 
 export default router;
+export { userService };

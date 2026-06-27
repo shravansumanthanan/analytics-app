@@ -1,19 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { env } from '../config/env';
-import { findExportSessions } from '../utils/session-query';
-import { findExportEvents } from '../utils/event-query';
+import { ExportService } from '../services/export.service';
 
 /** Helper to format flat objects into a standard CSV string with proper escaping. */
-function convertToCSV(data: any[]): string {
+function convertToCSV(data: unknown[]): string {
   if (data.length === 0) return '';
-  const headers = Object.keys(data[0]);
+  const headers = Object.keys(data[0] as Record<string, unknown>);
   const csvRows = [];
   
   // Header row
   csvRows.push(headers.join(','));
   
   // Data rows
-  for (const row of data) {
+  for (const row of data as Array<Record<string, unknown>>) {
     const values = headers.map(header => {
       const val = row[header];
       const stringVal = val === null || val === undefined ? '' : String(val);
@@ -30,6 +29,8 @@ function convertToCSV(data: any[]): string {
 }
 
 export class ExportController {
+  constructor(private exportService: ExportService) {}
+
   private authenticate(req: Request): boolean {
     const apiKey = req.query.apiKey || req.headers['x-api-key'] || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
     return apiKey === env.ADMIN_PASSWORD || apiKey === 'demo-bypass-token';
@@ -54,7 +55,7 @@ export class ExportController {
       };
 
       const format = req.query.format as string || 'json';
-      const { total, sessions } = await findExportSessions(filters);
+      const { total, sessions } = await this.exportService.exportSessions(filters);
 
       const flatSessions = sessions.map((s: any) => ({
         sessionId: s.sessionId || s.id,
@@ -104,7 +105,7 @@ export class ExportController {
       };
 
       const format = req.query.format as string || 'json';
-      const { total, events } = await findExportEvents(filters);
+      const { total, events } = await this.exportService.exportEvents(filters);
 
       const flatEvents = events.map((e: any) => ({
         eventId: e._id?.toString() || '',

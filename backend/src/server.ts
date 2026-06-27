@@ -2,12 +2,12 @@ import { createApp } from './app';
 import { connectDatabase } from './config/database';
 import { env } from './config/env';
 import { initSocketServer } from './socket';
-import { seedUsers } from './controllers/user.controller';
+import { userService } from './routes/index';
 
 async function bootstrap(): Promise<void> {
   await connectDatabase();
   try {
-    await seedUsers();
+    await userService.seedUsers();
   } catch (seedErr) {
     console.error('⚠️ User seeding failed:', seedErr);
   }

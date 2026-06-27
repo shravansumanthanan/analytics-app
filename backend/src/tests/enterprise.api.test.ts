@@ -49,23 +49,27 @@ vi.mock('../models/annotation.model', () => {
   };
 });
 
-vi.mock('../utils/session-query', () => {
+vi.mock('../repositories/session.repository', () => {
   const sessions = [
     { id: 'ses_1', sessionId: 'ses_1', visitorId: 'vis_1', userAgent: 'Chrome', firstSeen: new Date().toISOString(), lastSeen: new Date().toISOString(), eventCount: 15, frustrationCount: 2 }
   ];
   return {
-    findExportSessions: vi.fn().mockImplementation(() => Promise.resolve({ total: sessions.length, sessions: sessions })),
-    sessionExists: vi.fn().mockResolvedValue(true)
+    SessionRepository: class {
+      findExportSessions = vi.fn().mockImplementation(() => Promise.resolve({ total: sessions.length, sessions: sessions }));
+      sessionExists = vi.fn().mockResolvedValue(true);
+    }
   };
 });
 
-vi.mock('../utils/event-query', () => {
+vi.mock('../repositories/event.repository', () => {
   const events = [
     { _id: 'e1', sessionId: 'ses_1', visitorId: 'vis_1', projectId: 'proj_1', type: 'click', url: 'http://example.com', timestamp: new Date().toISOString(), userAgent: 'Chrome', data: { selector: 'button#pay', text: 'Pay Now', isFrustrated: false } }
   ];
   return {
-    findExportEvents: vi.fn().mockImplementation(() => Promise.resolve({ total: events.length, events: events })),
-    findEventsBySessionId: vi.fn().mockResolvedValue([])
+    EventRepository: class {
+      findExportEvents = vi.fn().mockImplementation(() => Promise.resolve({ total: events.length, events: events }));
+      findEventsBySessionId = vi.fn().mockResolvedValue([]);
+    }
   };
 });
 

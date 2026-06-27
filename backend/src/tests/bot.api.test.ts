@@ -18,43 +18,47 @@ const mockEvents = [
 let lastSessionFilters: any = null;
 let lastEventFilters: any = null;
 
-vi.mock('../utils/session-query', () => {
+vi.mock('../repositories/session.repository', () => {
   return {
-    findAllSessions: vi.fn().mockImplementation((filters: any) => {
-      lastSessionFilters = filters;
-      // Simulating the default filtering behavior of MongoDB
-      const filtered = mockSessions.filter(s => filters.includeBots === true ? true : !s.isBot);
-      return Promise.resolve(filtered.map(s => ({
-        id: s.sessionId,
-        visitorId: s.visitorId,
-        userAgent: s.userAgent,
-        startedAt: s.firstSeen,
-        lastActiveAt: s.lastSeen,
-        eventCount: s.eventCount,
-        frustrationCount: s.frustrationCount
-      })));
-    }),
-    sessionExists: vi.fn().mockResolvedValue(true)
+    SessionRepository: class {
+      findAllSessions = vi.fn().mockImplementation((filters: any) => {
+        lastSessionFilters = filters;
+        // Simulating the default filtering behavior of MongoDB
+        const filtered = mockSessions.filter(s => filters.includeBots === true ? true : !s.isBot);
+        return Promise.resolve(filtered.map(s => ({
+          id: s.sessionId,
+          visitorId: s.visitorId,
+          userAgent: s.userAgent,
+          startedAt: s.firstSeen,
+          lastActiveAt: s.lastSeen,
+          eventCount: s.eventCount,
+          frustrationCount: s.frustrationCount
+        })));
+      });
+      sessionExists = vi.fn().mockResolvedValue(true);
+    }
   };
 });
 
-vi.mock('../utils/event-query', () => {
+vi.mock('../repositories/event.repository', () => {
   return {
-    findClicksByUrl: vi.fn().mockImplementation((url: string, sessionId?: string, filters?: any) => {
-      lastEventFilters = filters;
-      const filtered = mockEvents.filter(e => {
-        if (e.url !== url || e.type !== 'click') return false;
-        if (filters?.includeBots === true) return true;
-        return !e.isBot;
+    EventRepository: class {
+      findClicksByUrl = vi.fn().mockImplementation((url: string, sessionId?: string, filters?: any) => {
+        lastEventFilters = filters;
+        const filtered = mockEvents.filter(e => {
+          if (e.url !== url || e.type !== 'click') return false;
+          if (filters?.includeBots === true) return true;
+          return !e.isBot;
+        });
+        return Promise.resolve(filtered.map(e => ({
+          x: e.data.x,
+          y: e.data.y,
+          count: 1
+        })));
       });
-      return Promise.resolve(filtered.map(e => ({
-        x: e.data.x,
-        y: e.data.y,
-        count: 1
-      })));
-    }),
-    findEventsBySessionId: vi.fn().mockResolvedValue([]),
-    findDistinctClickUrls: vi.fn().mockResolvedValue([])
+      findEventsBySessionId = vi.fn().mockResolvedValue([]);
+      findDistinctClickUrls = vi.fn().mockResolvedValue([]);
+    }
   };
 });
 

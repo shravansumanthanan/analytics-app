@@ -2,21 +2,25 @@ import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app';
 
-// Mock the query helpers to bypass MongoDB
-vi.mock('../utils/event-query', () => {
+// Mock the repositories to bypass MongoDB
+vi.mock('../repositories/event.repository', () => {
   return {
-    bulkCreateEvents: vi.fn().mockResolvedValue(undefined),
-    findClicksByUrl: vi.fn().mockResolvedValue([]),
-    findDistinctClickUrls: vi.fn().mockResolvedValue([]),
-    findEventsBySessionId: vi.fn().mockResolvedValue([]),
-    findAttentionByUrl: vi.fn().mockResolvedValue({})
+    EventRepository: class {
+      bulkCreateEvents = vi.fn().mockResolvedValue(undefined);
+      findClicksByUrl = vi.fn().mockResolvedValue([]);
+      findDistinctClickUrls = vi.fn().mockResolvedValue([]);
+      findEventsBySessionId = vi.fn().mockResolvedValue([]);
+      findAttentionByUrl = vi.fn().mockResolvedValue({});
+    }
   };
 });
 
-vi.mock('../utils/session-query', () => {
+vi.mock('../repositories/session.repository', () => {
   return {
-    bulkUpsertSessions: vi.fn().mockResolvedValue(undefined),
-    sessionExists: vi.fn().mockResolvedValue(true)
+    SessionRepository: class {
+      bulkUpsertSessions = vi.fn().mockResolvedValue(undefined);
+      sessionExists = vi.fn().mockResolvedValue(true);
+    }
   };
 });
 
@@ -69,7 +73,7 @@ describe('Event API', () => {
           timestamp: new Date().toISOString(),
           type: 'page_view',
           url: 'http://example.com',
-          data: {} // Added empty data to satisfy custom validation if needed, though schema might make it optional
+          data: {} // Added empty data to satisfy custom validation if needed
         }
       ];
 
