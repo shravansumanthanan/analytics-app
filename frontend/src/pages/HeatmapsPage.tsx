@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTrackedUrls, useHeatmap, useSessions } from '../api/hooks';
 import { 
   MapTrifold, Crosshair, WarningCircle, CursorClick, 
@@ -76,25 +76,30 @@ export function HeatmapsPage() {
   const [iframeHeight, setIframeHeight] = useState(1500);
   const [isIframeReady, setIsIframeReady] = useState(false);
 
-  // Reset iframe state when URL, Session, Type, or Goal filter changes
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      setIsIframeReady(false);
-      setIframeHeight(1500);
-      setResolvedPoints([]);
-      setHoveredPoint(null);
-    });
-    
-    // Request clearing overlays in iframe if it was active
-    const iframe = iframeRef.current;
-    if (iframe && iframe.contentWindow) {
-      try {
-        iframe.contentWindow.postMessage({ type: 'aos-clear-overlays' }, '*');
-      } catch {
-        // Ignored
-      }
-    }
-  }, [activeUrl, selectedSession, heatmapType, convertedOnly, goalValue]);
+  // Render-time state reset when URL or filters change
+  const [prevUrl, setPrevUrl] = useState(activeUrl);
+  const [prevSession, setPrevSession] = useState(selectedSession);
+  const [prevType, setPrevType] = useState(heatmapType);
+  const [prevConverted, setPrevConverted] = useState(convertedOnly);
+  const [prevGoal, setPrevGoal] = useState(goalValue);
+
+  if (
+    activeUrl !== prevUrl ||
+    selectedSession !== prevSession ||
+    heatmapType !== prevType ||
+    convertedOnly !== prevConverted ||
+    goalValue !== prevGoal
+  ) {
+    setPrevUrl(activeUrl);
+    setPrevSession(selectedSession);
+    setPrevType(heatmapType);
+    setPrevConverted(convertedOnly);
+    setPrevGoal(goalValue);
+    setIsIframeReady(false);
+    setIframeHeight(1500);
+    setResolvedPoints([]);
+    setHoveredPoint(null);
+  }
 
   // Setup messaging bridge with iframe
   useEffect(() => {
@@ -126,31 +131,13 @@ export function HeatmapsPage() {
     
     if (heatmapType === 'click') {
       if (!points || !Array.isArray(points) || points.length === 0) {
-        Promise.resolve().then(() => {
-          setResolvedPoints([]);
-        });
         if (iframe && iframe.contentWindow && isIframeReady) {
           iframe.contentWindow.postMessage({ type: 'aos-clear-overlays' }, '*');
         }
         return;
       }
 
-      if (!isIframeReady) {
-        // Fallback coordinate mapping assuming standard 1200px width layout
-        const fallbackPoints = points.map(p => {
-          const isRelativePoint = p.x < 0 || Math.abs(p.x) < 600;
-          return {
-            ...p,
-            x: isRelativePoint ? 600 + p.x : p.x,
-          };
-        });
-        Promise.resolve().then(() => {
-          setResolvedPoints(fallbackPoints);
-        });
-        return;
-      }
-
-      if (iframe && iframe.contentWindow) {
+      if (isIframeReady && iframe && iframe.contentWindow) {
         iframe.contentWindow.postMessage({ type: 'aos-clear-overlays' }, '*');
         iframe.contentWindow.postMessage({
           type: 'aos-resolve',
@@ -158,9 +145,6 @@ export function HeatmapsPage() {
         }, '*');
       }
     } else if (heatmapType === 'area') {
-      Promise.resolve().then(() => {
-        setResolvedPoints([]);
-      });
       if (iframe && iframe.contentWindow && isIframeReady) {
         if (points && Array.isArray(points) && points.length > 0) {
           iframe.contentWindow.postMessage({
@@ -172,14 +156,23 @@ export function HeatmapsPage() {
         }
       }
     } else if (heatmapType === 'attention') {
-      Promise.resolve().then(() => {
-        setResolvedPoints([]);
-      });
       if (iframe && iframe.contentWindow && isIframeReady) {
         iframe.contentWindow.postMessage({ type: 'aos-clear-overlays' }, '*');
       }
     }
   }, [points, isIframeReady, heatmapType]);
+
+  const resolvedPointsToRender = useMemo(() => {
+    return isIframeReady ? resolvedPoints : (
+      heatmapType === 'click' && points && Array.isArray(points) ? points.map(p => {
+        const isRelativePoint = p.x < 0 || Math.abs(p.x) < 600;
+        return {
+          ...p,
+          x: isRelativePoint ? 600 + p.x : p.x,
+        };
+      }) : []
+    );
+  }, [isIframeReady, resolvedPoints, heatmapType, points]);
 
   // Draw click heatmap or scroll attention gradient on canvas
   useEffect(() => {
@@ -191,9 +184,9 @@ export function HeatmapsPage() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (heatmapType === 'click' && resolvedPoints && resolvedPoints.length > 0) {
+    if (heatmapType === 'click' && resolvedPointsToRender && resolvedPointsToRender.length > 0) {
       // Draw thermal points
-      resolvedPoints.forEach(point => {
+      resolvedPointsToRender.forEach(point => {
         const drawX = point.x;
         const drawY = point.y;
 
@@ -308,7 +301,7 @@ export function HeatmapsPage() {
         });
       }
     }
-  }, [resolvedPoints, points, heatmapType]);
+  }, [resolvedPointsToRender, points, heatmapType]);
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -319,7 +312,7 @@ export function HeatmapsPage() {
     const mouseY = e.clientY - rect.top;
 
     // Find any points close to coordinates (e.g. 20 pixels radius)
-    const match = resolvedPoints.find(p => {
+    const match = resolvedPointsToRender.find(p => {
       const dist = Math.sqrt(Math.pow(p.x - mouseX, 2) + Math.pow(p.y - mouseY, 2));
       return dist < 20;
     });
