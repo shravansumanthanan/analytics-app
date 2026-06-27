@@ -1,29 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
-import { EventService } from '../services/event.service';
-import { SessionRepository } from '../repositories/session.repository';
 import { NotFoundError } from '../middleware/app-error';
 import type { IngestEventsInput, HeatmapQuery } from '../schemas/event.schema';
+import { writeBufferQueue } from '../services/write-buffer.queue';
+import { sessionExists } from '../utils/session-query';
+import {
+  findEventsBySessionId,
+  findClicksByUrl,
+  findAttentionByUrl,
+  findDistinctClickUrls
+} from '../utils/event-query';
 
-/**
- * EventController — handles HTTP request/response concerns only.
- *
- * Controllers do not contain business logic. They:
- *   1. Extract validated data from the request (already parsed by middleware).
- *   2. Delegate to the service layer.
- *   3. Shape the HTTP response.
- *
- * All errors are forwarded to the global error middleware via next(err).
- */
 export class EventController {
-  constructor(
-    private readonly eventService: EventService,
-    private readonly sessionRepo: SessionRepository,
-  ) {}
-
   /**
    * POST /api/events
    * Accepts a batch of one or more events.
-   * Body is already validated and typed by the validate middleware.
    */
   ingest = async (
     req: Request<unknown, unknown, IngestEventsInput>,
@@ -32,7 +22,7 @@ export class EventController {
   ): Promise<void> => {
     try {
       const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';
-      await this.eventService.ingest(req.body, ip);
+      writeBufferQueue.add(req.body, ip);
       res.status(202).json({ success: true, accepted: req.body.length });
     } catch (err) {
       next(err);
@@ -50,10 +40,10 @@ export class EventController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      if (!(await this.sessionRepo.exists(id))) {
+      if (!(await sessionExists(id))) {
         throw new NotFoundError(`Session '${id}'`);
       }
-      const events = await this.eventService.getSessionEvents(id);
+      const events = await findEventsBySessionId(id);
       res.json({ success: true, data: events });
     } catch (err) {
       next(err);
@@ -72,10 +62,10 @@ export class EventController {
     try {
       const { url, type, sessionId, convertedOnly, conversionPath, conversionEvent, includeBots } = req.query as any as HeatmapQuery;
       if (type === 'attention') {
-        const attentionData = await this.eventService.getAttentionHeatmap(url, sessionId);
+        const attentionData = await findAttentionByUrl(url, sessionId);
         res.json({ success: true, url, type, data: attentionData });
       } else {
-        const points = await this.eventService.getClickHeatmap(url, sessionId, {
+        const points = await findClicksByUrl(url, sessionId, {
           convertedOnly,
           conversionPath,
           conversionEvent,
@@ -98,7 +88,7 @@ export class EventController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const urls = await this.eventService.getTrackedUrls();
+      const urls = await findDistinctClickUrls();
       res.json({ success: true, data: urls });
     } catch (err) {
       next(err);

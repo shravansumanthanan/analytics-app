@@ -1,9 +1,9 @@
 import type { TrackedEvent } from '../types/event.types';
-import { EventRepository } from '../repositories/event.repository';
-import { SessionRepository } from '../repositories/session.repository';
 import { resolveIpLocation } from './geolocation.service';
 import { parseDeviceType } from '../utils/ua-parser';
 import { getSocketIO } from '../socket';
+import { bulkCreateEvents } from '../utils/event-query';
+import { bulkUpsertSessions } from '../utils/session-query';
 
 export class WriteBufferQueue {
   private queue: Array<{ event: TrackedEvent; ip?: string }> = [];
@@ -12,10 +12,7 @@ export class WriteBufferQueue {
   private readonly maxBufferSize = 100;
   private readonly flushIntervalMs = 2000;
 
-  constructor(
-    private readonly eventRepo: EventRepository,
-    private readonly sessionRepo: SessionRepository,
-  ) {
+  constructor() {
     this.startInterval();
     this.registerShutdownHandlers();
   }
@@ -91,8 +88,8 @@ export class WriteBufferQueue {
 
       // Write to database in single concurrent block
       await Promise.all([
-        this.eventRepo.bulkCreate(enrichedEvents as any),
-        this.sessionRepo.bulkUpsert(enrichedEvents as any),
+        bulkCreateEvents(enrichedEvents as any),
+        bulkUpsertSessions(enrichedEvents as any),
       ]);
 
       // Trigger socket broadcasts
@@ -101,20 +98,6 @@ export class WriteBufferQueue {
         io.emit('new-events', enrichedEvents);
       } catch (e) {
         // Socket.IO may not be running/initialized
-      }
-
-      // Trigger webhooks for frustration events in this batch
-      const frustrationEvents = enrichedEvents.filter(
-        e => e.type === 'rage_click' || e.type === 'dead_click' || e.type === 'js_error'
-      );
-      if (frustrationEvents.length > 0) {
-        // Dynamically import webhook dispatcher to avoid circular dependency
-        const { triggerWebhooks } = await import('./webhook.service');
-        for (const fe of frustrationEvents) {
-          triggerWebhooks(fe.type, fe).catch(err => {
-            console.error('AOS WriteBufferQueue: Webhook trigger error', err);
-          });
-        }
       }
 
     } catch (err) {
@@ -139,3 +122,5 @@ export class WriteBufferQueue {
     process.on('SIGINT', shutdown);
   }
 }
+
+export const writeBufferQueue = new WriteBufferQueue();

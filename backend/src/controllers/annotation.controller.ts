@@ -1,9 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { AnnotationService } from '../services/annotation.service';
+import { AnnotationModel } from '../models/annotation.model';
+import { NotFoundError } from '../middleware/app-error';
 
 export class AnnotationController {
-  constructor(private readonly annotationService: AnnotationService) {}
-
   getBySession = async (
     req: Request,
     res: Response,
@@ -11,7 +10,10 @@ export class AnnotationController {
   ): Promise<void> => {
     try {
       const { id: sessionId } = req.params;
-      const annotations = await this.annotationService.getAnnotations(sessionId);
+      const annotations = await AnnotationModel.find({ sessionId })
+        .sort({ timestampMs: 1 })
+        .lean()
+        .exec();
       res.json({ success: true, data: annotations });
     } catch (err) {
       next(err);
@@ -25,7 +27,14 @@ export class AnnotationController {
   ): Promise<void> => {
     try {
       const { id: sessionId } = req.params;
-      const annotation = await this.annotationService.createAnnotation(sessionId, req.body);
+      const { timestampMs, note, author } = req.body;
+      const annotation = await AnnotationModel.create({
+        sessionId,
+        timestampMs,
+        absoluteTimestamp: new Date(),
+        note,
+        author: author || 'Anonymous',
+      });
       res.status(201).json({ success: true, data: annotation });
     } catch (err) {
       next(err);
@@ -39,7 +48,10 @@ export class AnnotationController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      await this.annotationService.deleteAnnotation(id);
+      const deleted = await AnnotationModel.findByIdAndDelete(id).exec();
+      if (!deleted) {
+        throw new NotFoundError(`Annotation with ID '${id}' not found`);
+      }
       res.json({ success: true, message: 'Annotation deleted successfully' });
     } catch (err) {
       next(err);

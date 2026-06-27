@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { SessionRepository } from '../repositories/session.repository';
-import { EventService } from '../services/event.service';
 import { env } from '../config/env';
+import { findExportSessions } from '../utils/session-query';
+import { findExportEvents } from '../utils/event-query';
 
 /** Helper to format flat objects into a standard CSV string with proper escaping. */
 function convertToCSV(data: any[]): string {
@@ -30,11 +30,6 @@ function convertToCSV(data: any[]): string {
 }
 
 export class ExportController {
-  constructor(
-    private readonly sessionRepo: SessionRepository,
-    private readonly eventService: EventService
-  ) {}
-
   private authenticate(req: Request): boolean {
     const apiKey = req.query.apiKey || req.headers['x-api-key'] || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
     return apiKey === env.ADMIN_PASSWORD || apiKey === 'demo-bypass-token';
@@ -59,7 +54,7 @@ export class ExportController {
       };
 
       const format = req.query.format as string || 'json';
-      const { total, sessions } = await this.sessionRepo.findExportSessions(filters);
+      const { total, sessions } = await findExportSessions(filters);
 
       const flatSessions = sessions.map((s: any) => ({
         sessionId: s.sessionId || s.id,
@@ -109,7 +104,7 @@ export class ExportController {
       };
 
       const format = req.query.format as string || 'json';
-      const { total, events } = await this.eventService.getExportEvents(filters);
+      const { total, events } = await findExportEvents(filters);
 
       const flatEvents = events.map((e: any) => ({
         eventId: e._id?.toString() || '',

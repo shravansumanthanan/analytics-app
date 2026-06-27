@@ -1,9 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { RecordingRepository } from '../repositories/recording.repository';
+import { RecordingModel } from '../models/recording.model';
 
 export class RecordingController {
-  constructor(private readonly recordingRepo: RecordingRepository) {}
-
   /**
    * POST /api/sessions/:id/recording
    * Append events to session recording.
@@ -19,7 +17,14 @@ export class RecordingController {
       }
 
       if (id && events.length > 0) {
-        await this.recordingRepo.appendEvents(id, events);
+        await RecordingModel.findOneAndUpdate(
+          { sessionId: id },
+          {
+            $push: { events: { $each: events } },
+            $setOnInsert: { createdAt: new Date() }
+          },
+          { upsert: true, new: true }
+        ).exec();
       }
       res.json({ success: true });
     } catch (err) {
@@ -34,7 +39,7 @@ export class RecordingController {
   get = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
-      const recording = await this.recordingRepo.findBySessionId(id);
+      const recording = await RecordingModel.findOne({ sessionId: id }).exec();
       res.json({ success: true, data: recording?.events ?? [] });
     } catch (err) {
       next(err);
