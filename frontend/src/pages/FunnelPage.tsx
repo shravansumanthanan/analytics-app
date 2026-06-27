@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Funnel, WarningCircle, Plus, ArrowRight } from '@phosphor-icons/react';
+import { Funnel, WarningCircle, Plus, ArrowRight, Trash } from '@phosphor-icons/react';
 import { useFunnels, useFunnelAnalysis, type SessionFilters } from '../api/hooks';
 import { FilterBar } from '../components/ui/FilterBar';
 import { fetcher } from '../api/client';
@@ -30,6 +30,20 @@ export function FunnelPage() {
   if (!selectedFunnelId && funnels.length > 0) {
     setSelectedFunnelId(funnels[0]._id);
   }
+
+  const handleDeleteFunnel = async () => {
+    if (!selectedFunnelId) return;
+    if (!confirm('Are you sure you want to delete this funnel?')) return;
+
+    try {
+      await fetcher(`/funnels/${selectedFunnelId}`, { method: 'DELETE' });
+      const remaining = funnels.filter(f => f._id !== selectedFunnelId);
+      setSelectedFunnelId(remaining.length > 0 ? remaining[0]._id : null);
+      mutateFunnels();
+    } catch (err) {
+      console.error('Failed to delete funnel', err);
+    }
+  };
 
   const handleCreateFunnel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,7 +162,7 @@ export function FunnelPage() {
 
       {!isCreating && funnels.length > 0 && (
         <>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <select
               value={selectedFunnelId || ''}
               onChange={e => setSelectedFunnelId(e.target.value)}
@@ -158,6 +172,13 @@ export function FunnelPage() {
                 <option key={f._id} value={f._id}>{f.name}</option>
               ))}
             </select>
+            <button
+              onClick={handleDeleteFunnel}
+              className="p-2.5 border border-zinc-800 hover:border-red-900/50 hover:bg-red-950/20 text-zinc-400 hover:text-red-500 rounded transition-colors"
+              title="Delete Funnel"
+            >
+              <Trash size={18} />
+            </button>
             <div className="flex-1">
               <FilterBar />
             </div>

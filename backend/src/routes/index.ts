@@ -85,6 +85,7 @@ router.get(
 router.post('/funnels', authenticate, funnelController.create);
 router.get('/funnels', authenticate, funnelController.getAll);
 router.get('/funnels/:id/analysis', authenticate, funnelController.analyze);
+router.delete('/funnels/:id', authenticate, funnelController.delete);
 
 // ── Team Management ──────────────────────────────────────────────────────────
 router.get('/users', authenticate, userController.getAll);

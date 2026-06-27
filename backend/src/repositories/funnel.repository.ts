@@ -12,4 +12,8 @@ export class FunnelRepository {
   async findById(id: string): Promise<IFunnel | null> {
     return FunnelModel.findById(id).exec();
   }
+
+  async delete(id: string): Promise<IFunnel | null> {
+    return FunnelModel.findByIdAndDelete(id).exec();
+  }
 }

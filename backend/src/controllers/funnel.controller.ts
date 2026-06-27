@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { FunnelService } from '../services/funnel.service';
-import { ValidationError } from '../middleware/app-error';
+import { ValidationError, NotFoundError } from '../middleware/app-error';
 
 export class FunnelController {
   constructor(private funnelService: FunnelService) {}
@@ -40,6 +40,19 @@ export class FunnelController {
 
       const result = await this.funnelService.analyzeFunnel(id, filters);
       res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const deleted = await this.funnelService.deleteFunnel(id);
+      if (!deleted) {
+        throw new NotFoundError(`Funnel with ID '${id}' not found`);
+      }
+      res.json({ success: true, message: 'Funnel deleted successfully', data: deleted });
     } catch (err) {
       next(err);
     }

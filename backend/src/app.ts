@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import fs from 'fs';
 import { env } from './config/env';
 import router from './routes/index';
 import { errorMiddleware } from './middleware/error.middleware';
@@ -67,9 +68,17 @@ export function createApp(): Application {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Serve the tracker folder statically
-  app.use(express.static(path.join(__dirname, '../tracker')));
-  app.use('/demo', express.static(path.join(__dirname, '../demo')));
+  // Resolve static paths dynamically to support both development (from src/) and compiled production (from dist/)
+  const trackerPath = fs.existsSync(path.join(__dirname, '../tracker'))
+    ? path.join(__dirname, '../tracker')
+    : path.join(process.cwd(), 'tracker');
+
+  const demoPath = fs.existsSync(path.join(__dirname, '../demo'))
+    ? path.join(__dirname, '../demo')
+    : path.join(process.cwd(), 'demo');
+
+  app.use(express.static(trackerPath));
+  app.use('/demo', express.static(demoPath));
 
   // ── API routes ───────────────────────────────────────────────────────────────
   app.use('/api', router);

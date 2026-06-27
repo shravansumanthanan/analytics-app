@@ -97,4 +97,8 @@ export class FunnelService {
 
     return { steps: results };
   }
+
+  async deleteFunnel(id: string): Promise<any> {
+    return this.funnelRepository.delete(id);
+  }
 }

@@ -24,8 +24,33 @@ export function HeatmapsPage() {
   const [hoveredPoint, setHoveredPoint] = useState<any | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
+  const [domainOverride, setDomainOverride] = useState<string>(() => localStorage.getItem('aos_domain_override') || '');
+
+  useEffect(() => {
+    localStorage.setItem('aos_domain_override', domainOverride);
+  }, [domainOverride]);
+
   // Derive the active URL without causing immediate synchronous re-renders
   const activeUrl = selectedUrl || (urls && urls.length > 0 ? urls[0] : null);
+
+  const iframeSrc = useMemo(() => {
+    if (!activeUrl) return '';
+    if (!domainOverride) return activeUrl;
+    try {
+      const parsedUrl = new URL(activeUrl);
+      // Fallback if user omitted protocol (e.g. they typed my-app.com)
+      let cleanOverride = domainOverride;
+      if (!cleanOverride.startsWith('http://') && !cleanOverride.startsWith('https://')) {
+        cleanOverride = 'https://' + cleanOverride;
+      }
+      const parsedOverrideWithProtocol = new URL(cleanOverride);
+      parsedUrl.protocol = parsedOverrideWithProtocol.protocol;
+      parsedUrl.host = parsedOverrideWithProtocol.host;
+      return parsedUrl.toString();
+    } catch {
+      return activeUrl;
+    }
+  }, [activeUrl, domainOverride]);
 
   // Hook to fetch heatmap data (handles clicks / scroll attention based on type and conversion parameters)
   const { points: rawPoints, isLoading: isLoadingPoints, isError: isErrorPoints } = useHeatmap(
@@ -523,6 +548,23 @@ export function HeatmapsPage() {
             </div>
           )}
 
+          {/* Domain Override */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider">Domain Override</h3>
+            <input
+              type="text"
+              value={domainOverride}
+              onChange={(e) => setDomainOverride(e.target.value)}
+              placeholder="e.g., https://my-app.com"
+              className="w-full bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-zinc-700 font-mono"
+            />
+            <p className="text-[10px] text-zinc-600 leading-normal font-mono">
+              If the webpage was tracked on a different domain or port, enter the live URL here to bypass Mixed Content and load the iframe.
+            </p>
+          </div>
+
+          <hr className="border-zinc-850" />
+
           {/* Density legend */}
           <div className="pt-4 border-t border-zinc-850 space-y-3">
             <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Density Legend</h4>
@@ -575,7 +617,7 @@ export function HeatmapsPage() {
                 {/* Webpage iframe loaded behind the heatmap canvas */}
                 <iframe 
                   ref={iframeRef}
-                  src={activeUrl} 
+                  src={iframeSrc} 
                   className="absolute inset-0 w-full h-full border-0 select-none pointer-events-none opacity-85"
                   title="Heatmap Target Webpage"
                   sandbox="allow-scripts allow-same-origin"
