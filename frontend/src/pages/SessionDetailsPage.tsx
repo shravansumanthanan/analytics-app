@@ -40,7 +40,15 @@ export function SessionDetailsPage() {
   }, []);
 
   const session = sessions.find(s => s.id === id);
-  const isLive = session ? (Date.now() - new Date(session.lastActiveAt).getTime() < 60000) : false;
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    if (session) {
+      Promise.resolve().then(() => {
+        setIsLive(Date.now() - new Date(session.lastActiveAt).getTime() < 60000);
+      });
+    }
+  }, [session]);
 
   const sessionStartTime = events && events.length > 0 ? new Date(events[0].timestamp).getTime() : 0;
 

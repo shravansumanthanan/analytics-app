@@ -40,7 +40,9 @@ export function OverviewPage() {
     const active = sessions
       .filter(s => now - new Date(s.lastActiveAt).getTime() < 60000)
       .map(s => s.id);
-    setActiveSessionIds(new Set(active));
+    Promise.resolve().then(() => {
+      setActiveSessionIds(new Set(active));
+    });
   }, [sessions]);
 
   // Listen to live events via WebSockets to immediately add/update active sessions count

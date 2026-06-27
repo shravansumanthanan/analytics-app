@@ -66,7 +66,9 @@ export function SessionPlayer({ sessionId, isLive, seekToTimestamp, onGetCurrent
     if (!isLive || !sessionId) return;
 
     // Reset live events
-    setLiveEvents([]);
+    Promise.resolve().then(() => {
+      setLiveEvents([]);
+    });
 
     socket.emit('join-session-room', sessionId);
 

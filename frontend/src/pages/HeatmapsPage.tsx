@@ -78,10 +78,12 @@ export function HeatmapsPage() {
 
   // Reset iframe state when URL, Session, Type, or Goal filter changes
   useEffect(() => {
-    setIsIframeReady(false);
-    setIframeHeight(1500);
-    setResolvedPoints([]);
-    setHoveredPoint(null);
+    Promise.resolve().then(() => {
+      setIsIframeReady(false);
+      setIframeHeight(1500);
+      setResolvedPoints([]);
+      setHoveredPoint(null);
+    });
     
     // Request clearing overlays in iframe if it was active
     const iframe = iframeRef.current;
@@ -124,7 +126,9 @@ export function HeatmapsPage() {
     
     if (heatmapType === 'click') {
       if (!points || !Array.isArray(points) || points.length === 0) {
-        setResolvedPoints([]);
+        Promise.resolve().then(() => {
+          setResolvedPoints([]);
+        });
         if (iframe && iframe.contentWindow && isIframeReady) {
           iframe.contentWindow.postMessage({ type: 'aos-clear-overlays' }, '*');
         }
@@ -140,7 +144,9 @@ export function HeatmapsPage() {
             x: isRelativePoint ? 600 + p.x : p.x,
           };
         });
-        setResolvedPoints(fallbackPoints);
+        Promise.resolve().then(() => {
+          setResolvedPoints(fallbackPoints);
+        });
         return;
       }
 
@@ -152,7 +158,9 @@ export function HeatmapsPage() {
         }, '*');
       }
     } else if (heatmapType === 'area') {
-      setResolvedPoints([]);
+      Promise.resolve().then(() => {
+        setResolvedPoints([]);
+      });
       if (iframe && iframe.contentWindow && isIframeReady) {
         if (points && Array.isArray(points) && points.length > 0) {
           iframe.contentWindow.postMessage({
@@ -164,7 +172,9 @@ export function HeatmapsPage() {
         }
       }
     } else if (heatmapType === 'attention') {
-      setResolvedPoints([]);
+      Promise.resolve().then(() => {
+        setResolvedPoints([]);
+      });
       if (iframe && iframe.contentWindow && isIframeReady) {
         iframe.contentWindow.postMessage({ type: 'aos-clear-overlays' }, '*');
       }
